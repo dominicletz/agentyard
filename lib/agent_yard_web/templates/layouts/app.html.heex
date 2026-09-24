@@ -1,0 +1,49 @@
+<div class="app-shell">
+  <aside class="sidebar">
+    <a class="brand" href={~p"/runs"}>
+      <span class="brand-mark">AY</span>
+      <span><strong>AgentYard</strong><small>self-hosted agents</small></span>
+    </a>
+
+    <p class="sidebar-label">Workspace</p>
+    <nav class="sidebar-nav">
+      <.link navigate={~p"/runs"} class={if @active_nav == :runs, do: "active", else: ""}>
+        <span>◉</span> Runs
+      </.link>
+      <.link navigate={~p"/runs/new"} class={if @active_nav == :new_run, do: "active", else: ""}>
+        <span>＋</span> New run
+      </.link>
+      <.link navigate={~p"/repositories"} class={if @active_nav == :repositories, do: "active", else: ""}>
+        <span>⌘</span> Repository
+      </.link>
+      <.link navigate={~p"/profiles"} class={if @active_nav == :profiles, do: "active", else: ""}>
+        <span>◇</span> Agent profiles
+      </.link>
+      <.link navigate={~p"/team/settings"} class={if @active_nav == :team, do: "active", else: ""}>
+        <span>⚙</span> Team settings
+      </.link>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="team-card">
+        <span class="avatar avatar-small">AC</span>
+        <span><strong><%= @team && @team.name || "Demo team" %></strong><small><%= @current_user && @current_user.email || "local workspace" %></small></span>
+      </div>
+      <a href={~p"/logout"} class="logout-link">Sign out</a>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header class="topbar">
+      <div class="breadcrumbs"><span>Runs</span><span>›</span><strong><%= @page_title || "Overview" %></strong></div>
+      <div class="topbar-actions">
+        <span class="demo-pill">● Example data</span>
+        <span class="avatar avatar-small"><%= initials(@current_user && @current_user.email) %></span>
+      </div>
+    </header>
+    <section class="page-content">
+      <.flash_group flash={@flash} />
+      <%= @inner_content %>
+    </section>
+  </main>
+</div>

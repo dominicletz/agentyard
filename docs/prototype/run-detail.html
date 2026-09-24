@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Run detail · AgentYard</title>
+<link rel="stylesheet" href="css/app.css"/>
+</head>
+<body class="">
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">AY</div>
+      <div>
+        <div class="brand-name">AgentYard</div>
+        <div class="brand-sub">self-hosted agents</div>
+      </div>
+    </div>
+    <div class="nav-section">Workspace</div>
+    <nav class="nav">
+<a class="" href="index.html"><span class="ico">⌂</span>Home</a>
+<a class="" href="runs.html"><span class="ico">◎</span>Runs</a>
+<a class="" href="new-run.html"><span class="ico">＋</span>New run</a>
+<a class="active" href="run-detail.html"><span class="ico">▷</span>Run detail</a>
+<a class="" href="repository.html"><span class="ico">⌘</span>Repository</a>
+<a class="" href="agent-profiles.html"><span class="ico">✦</span>Agent profiles</a>
+<a class="" href="team-settings.html"><span class="ico">⚙</span>Team settings</a>
+<a class="" href="run-detail-dark.html"><span class="ico">◐</span>Run detail (dark)</a>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="team-pill">
+        <div class="avatar">AC</div>
+        <div>
+          <div style="font-weight:600;color:#fff;font-size:13px">Acme Engineering</div>
+          <div style="font-size:11px;color:#94a3b8">Team · Berlin</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="main">
+    <header class="topbar">
+      <div class="crumbs">Runs · <a href="runs.html">Overview</a> · <strong>run_8f2a</strong></div>
+      <div style="display:flex;align-items:center;gap:10px">
+
+        <span class="example-tag">Example data</span>
+        <div class="avatar" title="Maya Chen">MC</div>
+      </div>
+    </header>
+    <div class="content run-page">
+
+      <div class="page-head" style="margin-bottom:12px">
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+            <span class="badge b-running">Running</span>
+            <span class="pill">GitHub @mention</span>
+            <span class="mono dim">run_8f2a · session_c1e9</span>
+          </div>
+          <h1>Add idempotency keys to checkout</h1>
+          <p><span class="pill">acme/payments-api</span> · branch <span class="mono">agent/idempotency-1842</span> · Claude Code · Sonnet · Maya Chen</p>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-danger">■ Stop</button>
+          <button class="btn">Open PR</button>
+          <button class="btn">Copy branch</button>
+        </div>
+      </div>
+      <div class="stats" style="grid-template-columns:repeat(5,1fr);margin-bottom:12px">
+        <div class="stat"><div class="label">Elapsed</div><div class="value" style="font-size:18px">04:12</div></div>
+        <div class="stat"><div class="label">Tokens</div><div class="value" style="font-size:18px">48.2k</div></div>
+        <div class="stat"><div class="label">Cost</div><div class="value" style="font-size:18px">$1.84</div></div>
+        <div class="stat"><div class="label">Files touched</div><div class="value" style="font-size:18px">6</div></div>
+        <div class="stat"><div class="label">Tests</div><div class="value" style="font-size:18px;color:var(--ok)">12 ✓</div></div>
+      </div>
+      <div class="split-run">
+        <div class="panel" style="display:flex;flex-direction:column;min-height:0">
+          <div class="tabs">
+            <div class="tab active">Timeline</div>
+            <div class="tab">Terminal</div>
+            <div class="tab">Diff</div>
+            <div class="tab">Artifacts</div>
+          </div>
+          <div class="scroll timeline" style="flex:1">
+            <div class="evt">
+              <div class="evt-time">14:02:01</div>
+              <div class="evt-body"><div class="evt-kind">System</div><div class="muted">Cloned acme/payments-api@main · worktree agent/idempotency-1842</div></div>
+            </div>
+            <div class="evt">
+              <div class="evt-time">14:02:18</div>
+              <div class="evt-body"><div class="evt-kind">Assistant</div><div class="evt-asst">I'll add an Idempotency-Key header check on POST /checkout, persist keys in Postgres, and cover concurrent retries.</div></div>
+            </div>
+            <div class="evt">
+              <div class="evt-time">14:02:41</div>
+              <div class="evt-body">
+                <div class="evt-kind">Tool · Read</div>
+                <div class="evt-tool">path: lib/payments_api/checkout.ex
+lines: 1–120</div>
+              </div>
+            </div>
+            <div class="evt">
+              <div class="evt-time">14:03:12</div>
+              <div class="evt-body">
+                <div class="evt-kind">Tool · Edit</div>
+                <div class="evt-tool">path: lib/payments_api/checkout.ex
++ def checkout(conn, params) do
++   with {:ok, key} <- Idempotency.fetch(conn),
++        {:ok, order} <- Orders.create_once(key, params) do
++     json(conn, order)
++   else
++     {:error, :duplicate} -> send_resp(conn, 409, "duplicate")
++   end
++ end</div>
+              </div>
+            </div>
+            <div class="evt">
+              <div class="evt-time">14:04:05</div>
+              <div class="evt-body">
+                <div class="evt-kind">Tool · Bash</div>
+                <div class="evt-tool">$ mix test test/checkout_idempotency_test.exs
+.......
+12 tests, 0 failures
+Finished in 1.8s</div>
+              </div>
+            </div>
+            <div class="evt">
+              <div class="evt-time">14:05:22</div>
+              <div class="evt-body"><div class="evt-kind">Assistant</div><div class="evt-asst">Tests are green. Drafting PR description and pushing branch…</div></div>
+            </div>
+          </div>
+          <div class="composer">
+            <textarea placeholder="Send a follow-up to the running agent…"></textarea>
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span class="dim">Enter to send · Shift+Enter newline</span>
+              <button class="btn btn-primary">Send follow-up</button>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px;min-height:0">
+          <div class="panel">
+            <div class="panel-h"><h2>Result</h2><span class="badge b-running">In progress</span></div>
+            <div style="padding:14px">
+              <dl class="kv">
+                <dt>Branch</dt><dd class="mono">agent/idempotency-1842</dd>
+                <dt>PR</dt><dd class="muted">Will open when agent finishes</dd>
+                <dt>Issue</dt><dd><a style="color:var(--accent)" href="#">#1842</a></dd>
+                <dt>Forge</dt><dd>GitHub · acme/payments-api</dd>
+              </dl>
+            </div>
+          </div>
+          <div class="panel" style="flex:1;min-height:0;display:flex;flex-direction:column">
+            <div class="panel-h"><h2>Live diff preview</h2><span class="dim">+84 −12</span></div>
+            <div class="scroll" style="padding:10px;flex:1">
+              <div class="diff"><span class="meta">--- a/lib/payments_api/idempotency.ex</span>
+<span class="meta">+++ b/lib/payments_api/idempotency.ex</span>
+<span class="add">+defmodule PaymentsApi.Idempotency do</span>
+<span class="add">+  @ttl_hours 24</span>
+<span class="add">+  def fetch(conn) do</span>
+<span class="add">+    case get_req_header(conn, "idempotency-key") do</span>
+<span class="add">+      [key] when byte_size(key) > 0 -> {:ok, key}</span>
+<span class="add">+      _ -> {:error, :missing}</span>
+<span class="add">+    end</span>
+<span class="add">+  end</span>
+<span class="add">+end</span>
+<span class="del">-# TODO: add idempotency</span></div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-h"><h2>Usage</h2></div>
+            <div style="padding:14px">
+              <dl class="kv">
+                <dt>Input</dt><dd class="mono">31,400 tok</dd>
+                <dt>Output</dt><dd class="mono">16,800 tok</dd>
+                <dt>Budget</dt><dd>$1.84 / $5.00</dd>
+              </dl>
+              <div class="prog"><span style="width:37%"></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-note">
+        <span>AgentYard · placeholder brand · Acme sample workspace</span>
+        <span>Prototype · not a live product</span>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

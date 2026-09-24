@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>New run · AgentYard</title>
+<link rel="stylesheet" href="css/app.css"/>
+</head>
+<body class="">
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">AY</div>
+      <div>
+        <div class="brand-name">AgentYard</div>
+        <div class="brand-sub">self-hosted agents</div>
+      </div>
+    </div>
+    <div class="nav-section">Workspace</div>
+    <nav class="nav">
+<a class="" href="index.html"><span class="ico">⌂</span>Home</a>
+<a class="" href="runs.html"><span class="ico">◎</span>Runs</a>
+<a class="active" href="new-run.html"><span class="ico">＋</span>New run</a>
+<a class="" href="run-detail.html"><span class="ico">▷</span>Run detail</a>
+<a class="" href="repository.html"><span class="ico">⌘</span>Repository</a>
+<a class="" href="agent-profiles.html"><span class="ico">✦</span>Agent profiles</a>
+<a class="" href="team-settings.html"><span class="ico">⚙</span>Team settings</a>
+<a class="" href="run-detail-dark.html"><span class="ico">◐</span>Run detail (dark)</a>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="team-pill">
+        <div class="avatar">AC</div>
+        <div>
+          <div style="font-weight:600;color:#fff;font-size:13px">Acme Engineering</div>
+          <div style="font-size:11px;color:#94a3b8">Team · Berlin</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="main">
+    <header class="topbar">
+      <div class="crumbs">Runs · <strong>New run</strong></div>
+      <div style="display:flex;align-items:center;gap:10px">
+
+        <span class="example-tag">Example data</span>
+        <div class="avatar" title="Maya Chen">MC</div>
+      </div>
+    </header>
+    <div class="content ">
+
+      <div class="page-head">
+        <div>
+          <h1>New run</h1>
+          <p>Start an async coding agent against a connected repository.</p>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn">Save draft</button>
+          <a class="btn btn-primary" href="run-detail.html">Start run</a>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="panel" style="padding:16px">
+          <div class="form-grid">
+            <div class="row-2">
+              <div class="field">
+                <label>Repository</label>
+                <select style="width:100%"><option>acme/payments-api (GitHub)</option><option>acme/infra-terraform (GitLab)</option><option>acme/web-frontend (GitHub)</option></select>
+              </div>
+              <div class="field">
+                <label>Base branch</label>
+                <select style="width:100%"><option>main</option><option>develop</option><option>release/2026.09</option></select>
+              </div>
+            </div>
+            <div class="field">
+              <label>Agent profile</label>
+              <select style="width:100%">
+                <option>Claude Code · Sonnet — default (repo)</option>
+                <option>Cursor CLI · Auto</option>
+                <option>OpenRouter · GPT-4.1</option>
+                <option>Codex · o4-mini</option>
+              </select>
+              <div class="hint">Permission mode: ask before risky writes · Budget: $5</div>
+            </div>
+            <div class="field">
+              <label>Prompt</label>
+              <textarea style="width:100%;min-height:160px">Add idempotency keys for the /checkout endpoint.
+
+Requirements:
+- Persist keys in Postgres with a 24h TTL
+- Reject duplicate requests with 409
+- Add tests covering concurrent retries
+- Open a PR titled "feat: checkout idempotency"</textarea>
+            </div>
+            <div class="row-2">
+              <div class="field">
+                <label>Attach issue (optional)</label>
+                <input class="input" style="width:100%" value="github.com/acme/payments-api#1842"/>
+              </div>
+              <div class="field">
+                <label>Environment</label>
+                <select style="width:100%"><option>payments-api · Dockerfile (cached)</option><option>payments-api · snapshot 2026-09-20</option></select>
+              </div>
+            </div>
+            <div class="chip-row">
+              <label class="pill"><input type="checkbox" checked/> Auto-open PR/MR</label>
+              <label class="pill"><input type="checkbox" checked/> Run tests</label>
+              <label class="pill"><input type="checkbox"/> Allow network egress</label>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="panel" style="margin-bottom:12px">
+            <div class="panel-h"><h2>Sandbox preview</h2><span class="badge b-success">Image ready</span></div>
+            <div style="padding:14px">
+              <dl class="kv">
+                <dt>Image</dt><dd class="mono">acme/payments-api:env-12</dd>
+                <dt>CPU / RAM</dt><dd>2 vCPU · 4 GB</dd>
+                <dt>Egress</dt><dd>Allowlist · npm + hex + github</dd>
+                <dt>Secrets</dt><dd>3 repo · 1 team (masked)</dd>
+              </dl>
+              <div class="prog"><span></span></div>
+              <div class="hint muted" style="margin-top:6px">Last build 2d ago · 3m 12s</div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-h"><h2>Estimated cost</h2></div>
+            <div style="padding:14px">
+              <div style="font-size:28px;font-weight:650;letter-spacing:-.03em">~$1.20 – $2.40</div>
+              <p class="muted" style="margin:6px 0 0">Based on similar Sonnet runs on this repo. Hard stop at profile budget ($5).</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-note">
+        <span>AgentYard · placeholder brand · Acme sample workspace</span>
+        <span>Prototype · not a live product</span>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

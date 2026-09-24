@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Team settings · AgentYard</title>
+<link rel="stylesheet" href="css/app.css"/>
+</head>
+<body class="">
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">AY</div>
+      <div>
+        <div class="brand-name">AgentYard</div>
+        <div class="brand-sub">self-hosted agents</div>
+      </div>
+    </div>
+    <div class="nav-section">Workspace</div>
+    <nav class="nav">
+<a class="" href="index.html"><span class="ico">⌂</span>Home</a>
+<a class="" href="runs.html"><span class="ico">◎</span>Runs</a>
+<a class="" href="new-run.html"><span class="ico">＋</span>New run</a>
+<a class="" href="run-detail.html"><span class="ico">▷</span>Run detail</a>
+<a class="" href="repository.html"><span class="ico">⌘</span>Repository</a>
+<a class="" href="agent-profiles.html"><span class="ico">✦</span>Agent profiles</a>
+<a class="active" href="team-settings.html"><span class="ico">⚙</span>Team settings</a>
+<a class="" href="run-detail-dark.html"><span class="ico">◐</span>Run detail (dark)</a>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="team-pill">
+        <div class="avatar">AC</div>
+        <div>
+          <div style="font-weight:600;color:#fff;font-size:13px">Acme Engineering</div>
+          <div style="font-size:11px;color:#94a3b8">Team · Berlin</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="main">
+    <header class="topbar">
+      <div class="crumbs">Settings · <strong>Team</strong></div>
+      <div style="display:flex;align-items:center;gap:10px">
+
+        <span class="example-tag">Example data</span>
+        <div class="avatar" title="Maya Chen">MC</div>
+      </div>
+    </header>
+    <div class="content ">
+
+      <div class="page-head">
+        <div>
+          <h1>Team settings</h1>
+          <p>Acme Engineering · governance, secrets, integrations.</p>
+        </div>
+      </div>
+      <div class="tabs" style="margin-bottom:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius)">
+        <div class="tab active">Members</div>
+        <div class="tab">SSO</div>
+        <div class="tab">Secrets vault</div>
+        <div class="tab">Integrations</div>
+        <div class="tab">Audit log</div>
+      </div>
+      <div class="grid-2">
+        <div class="panel">
+          <div class="panel-h"><h2>Members &amp; roles</h2><button class="btn btn-sm">Invite</button></div>
+          <div class="list-row">
+            <div style="display:flex;gap:10px;align-items:center"><div class="avatar">MC</div><div><strong>Maya Chen</strong><div class="dim">maya@acme.example</div></div></div>
+            <span class="pill">Owner</span>
+          </div>
+          <div class="list-row">
+            <div style="display:flex;gap:10px;align-items:center"><div class="avatar">JL</div><div><strong>Jonas Lang</strong><div class="dim">jonas@acme.example</div></div></div>
+            <span class="pill">Admin</span>
+          </div>
+          <div class="list-row">
+            <div style="display:flex;gap:10px;align-items:center"><div class="avatar">SK</div><div><strong>Sara Klein</strong><div class="dim">sara@acme.example</div></div></div>
+            <span class="pill">Member</span>
+          </div>
+          <div class="list-row">
+            <div style="display:flex;gap:10px;align-items:center"><div class="avatar">TR</div><div><strong>Tom Richter</strong><div class="dim">tom@acme.example</div></div></div>
+            <span class="pill">Viewer</span>
+          </div>
+        </div>
+        <div>
+          <div class="panel" style="margin-bottom:12px">
+            <div class="panel-h"><h2>SSO</h2><span class="badge b-queued">Optional</span></div>
+            <div style="padding:14px">
+              <p class="muted" style="margin-top:0">SAML / OIDC for Acme IdP. Recommended for teams &gt; 20.</p>
+              <button class="btn">Configure OIDC</button>
+            </div>
+          </div>
+          <div class="panel" style="margin-bottom:12px">
+            <div class="panel-h"><h2>Secrets vault</h2><button class="btn btn-sm">Rotate master key</button></div>
+            <div style="padding:14px">
+              <dl class="kv">
+                <dt>At rest</dt><dd>AES-GCM via Cloak · key in env</dd>
+                <dt>Team secrets</dt><dd>7</dd>
+                <dt>External</dt><dd>HashiCorp Vault — not connected</dd>
+              </dl>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-h"><h2>Integrations</h2></div>
+            <div class="list-row"><div><strong>GitHub App</strong><div class="dim">12 repos</div></div><span class="badge b-success">Connected</span></div>
+            <div class="list-row"><div><strong>GitLab</strong><div class="dim">self-managed · gitlab.acme.internal</div></div><span class="badge b-success">Connected</span></div>
+            <div class="list-row"><div><strong>Slack</strong><div class="dim">#eng-agents</div></div><span class="badge b-waiting">Soon</span></div>
+            <div class="list-row"><div><strong>Jira</strong><div class="dim">Cloud</div></div><span class="badge b-queued">Soon</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="panel" style="margin-top:12px">
+        <div class="panel-h"><h2>Audit log (sample)</h2></div>
+        <table>
+          <thead><tr><th>When</th><th>Actor</th><th>Action</th><th>Target</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">14:02</td><td>Maya Chen</td><td>run.start</td><td class="mono">run_8f2a</td></tr>
+            <tr><td class="mono">13:40</td><td>Jonas Lang</td><td>secret.update</td><td class="mono">STRIPE_SECRET_KEY</td></tr>
+            <tr><td class="mono">11:15</td><td>system</td><td>gitlab.webhook</td><td class="mono">infra-terraform!412</td></tr>
+            <tr><td class="mono">09:02</td><td>Sara Klein</td><td>member.invite</td><td>tom@acme.example</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="footer-note">
+        <span>AgentYard · placeholder brand · Acme sample workspace</span>
+        <span>Prototype · not a live product</span>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Repository · AgentYard</title>
+<link rel="stylesheet" href="css/app.css"/>
+</head>
+<body class="">
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">AY</div>
+      <div>
+        <div class="brand-name">AgentYard</div>
+        <div class="brand-sub">self-hosted agents</div>
+      </div>
+    </div>
+    <div class="nav-section">Workspace</div>
+    <nav class="nav">
+<a class="" href="index.html"><span class="ico">⌂</span>Home</a>
+<a class="" href="runs.html"><span class="ico">◎</span>Runs</a>
+<a class="" href="new-run.html"><span class="ico">＋</span>New run</a>
+<a class="" href="run-detail.html"><span class="ico">▷</span>Run detail</a>
+<a class="active" href="repository.html"><span class="ico">⌘</span>Repository</a>
+<a class="" href="agent-profiles.html"><span class="ico">✦</span>Agent profiles</a>
+<a class="" href="team-settings.html"><span class="ico">⚙</span>Team settings</a>
+<a class="" href="run-detail-dark.html"><span class="ico">◐</span>Run detail (dark)</a>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="team-pill">
+        <div class="avatar">AC</div>
+        <div>
+          <div style="font-weight:600;color:#fff;font-size:13px">Acme Engineering</div>
+          <div style="font-size:11px;color:#94a3b8">Team · Berlin</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="main">
+    <header class="topbar">
+      <div class="crumbs">Repos · <strong>payments-api</strong></div>
+      <div style="display:flex;align-items:center;gap:10px">
+
+        <span class="example-tag">Example data</span>
+        <div class="avatar" title="Maya Chen">MC</div>
+      </div>
+    </header>
+    <div class="content ">
+
+      <div class="page-head">
+        <div>
+          <h1>acme/payments-api</h1>
+          <p>GitHub · default branch main · connected as GitHub App</p>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn">Test env build</button>
+          <button class="btn btn-primary">Save changes</button>
+        </div>
+      </div>
+      <div class="tabs" style="margin-bottom:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius)">
+        <div class="tab active">Environment</div>
+        <div class="tab">Triggers</div>
+        <div class="tab">Secrets</div>
+        <div class="tab">Defaults</div>
+      </div>
+      <div class="grid-2">
+        <div class="panel" style="padding:16px">
+          <div class="form-grid">
+            <div class="field">
+              <label>Dockerfile path</label>
+              <input class="input" style="width:100%" value=".agentyard/Dockerfile"/>
+            </div>
+            <div class="field">
+              <label>Install (build time)</label>
+              <textarea style="width:100%;min-height:90px;font-family:var(--mono);font-size:12px">mix deps.get
+mix compile
+npm ci --prefix assets</textarea>
+            </div>
+            <div class="field">
+              <label>Start (run time)</label>
+              <textarea style="width:100%;min-height:70px;font-family:var(--mono);font-size:12px">docker compose up -d postgres redis
+mix ecto.migrate</textarea>
+            </div>
+            <div class="row-2">
+              <div class="field">
+                <label>Default agent profile</label>
+                <select style="width:100%"><option>Claude Code · Sonnet</option><option>Cursor CLI · Auto</option></select>
+              </div>
+              <div class="field">
+                <label>Network egress</label>
+                <select style="width:100%"><option>Allowlist</option><option>Deny all</option><option>Allow all (unsafe)</option></select>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="panel" style="margin-bottom:12px">
+            <div class="panel-h"><h2>Triggers</h2></div>
+            <div class="list-row"><div><strong>@agentyard mention</strong><div class="muted">Issues &amp; PRs</div></div><div class="toggle"></div></div>
+            <div class="list-row"><div><strong>Label <span class="pill">agent</span></strong><div class="muted">Auto-start on label</div></div><div class="toggle"></div></div>
+            <div class="list-row"><div><strong>Draft PR on finish</strong><div class="muted">Always open PR</div></div><div class="toggle"></div></div>
+          </div>
+          <div class="panel">
+            <div class="panel-h"><h2>Repo secrets</h2><button class="btn btn-sm">＋ Add</button></div>
+            <div class="list-row"><div><span class="mono">DATABASE_URL</span><div class="dim">updated 3d ago</div></div><span class="badge b-success">Encrypted</span></div>
+            <div class="list-row"><div><span class="mono">STRIPE_SECRET_KEY</span><div class="dim">updated 12d ago</div></div><span class="badge b-success">Encrypted</span></div>
+            <div class="list-row"><div><span class="mono">NPM_TOKEN</span><div class="dim">updated 1mo ago</div></div><span class="badge b-success">Encrypted</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-note">
+        <span>AgentYard · placeholder brand · Acme sample workspace</span>
+        <span>Prototype · not a live product</span>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

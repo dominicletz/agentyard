@@ -1,0 +1,5 @@
+{"type":"system","subtype":"init","session_id":"demo"}
+{"type":"assistant","message":{"content":[{"type":"text","text":"I will inspect the checkout code."}]}}
+{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Bash","input":{"command":"git status --short"}}]}}
+{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"tool-1","content":"working tree clean"}]}}
+{"type":"result","subtype":"success","result":"Completed","usage":{"input_tokens":120,"output_tokens":64,"cache_read_input_tokens":12},"total_cost_usd":0.034}
