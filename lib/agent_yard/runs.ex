@@ -37,6 +37,14 @@ defmodule AgentYard.Runs do
     |> Repo.get(id)
   end
 
+  def active_runs do
+    from(r in Run,
+      where: r.status in ["queued", "running"],
+      select: r
+    )
+    |> Repo.all()
+  end
+
   def create_run(%User{} = user, %Team{id: team_id}, attrs) do
     repository = Repo.get_by!(Repository, id: attr(attrs, :repository_id), team_id: team_id)
     profile = Repo.get_by!(Profile, id: attr(attrs, :agent_profile_id), team_id: team_id)
@@ -150,7 +158,6 @@ defmodule AgentYard.Runs do
 
       record
     end)
-    |> unwrap_transaction()
   end
 
   def apply_event(%Run{} = run, %AgentYard.Agents.Event{type: "usage", usage: usage}) do

@@ -1,6 +1,5 @@
 defmodule AgentYardWeb.UserAuth do
   import Plug.Conn
-  import Phoenix.LiveView
 
   alias AgentYard.Accounts
 
@@ -19,8 +18,8 @@ defmodule AgentYardWeb.UserAuth do
       end
 
     conn
-    |> assign(:current_user, user)
-    |> assign(:team, user && Accounts.team_for_user(user))
+    |> Plug.Conn.assign(:current_user, user)
+    |> Plug.Conn.assign(:team, user && Accounts.team_for_user(user))
   end
 
   def require_authenticated_user(%Plug.Conn{assigns: %{current_user: %{} = user}} = conn, _opts)
@@ -42,14 +41,14 @@ defmodule AgentYardWeb.UserAuth do
 
     socket =
       socket
-      |> assign(:current_user, user)
-      |> assign(:team, user && Accounts.team_for_user(user))
-      |> assign(:active_nav, nil)
+      |> Phoenix.Component.assign(:current_user, user)
+      |> Phoenix.Component.assign(:team, user && Accounts.team_for_user(user))
+      |> Phoenix.Component.assign(:active_nav, nil)
 
     if user || Application.get_env(:agentyard, :demo_mode, false) do
       {:cont, socket}
     else
-      {:halt, redirect(socket, to: "/login")}
+      {:halt, Phoenix.LiveView.redirect(socket, to: "/login")}
     end
   end
 
@@ -57,13 +56,13 @@ defmodule AgentYardWeb.UserAuth do
     conn
     |> configure_session(renew: true)
     |> put_session(:user_id, user.id)
-    |> redirect(to: "/runs")
+    |> Phoenix.Controller.redirect(to: "/runs")
   end
 
   def log_out_user(conn) do
     conn
     |> configure_session(drop: true)
-    |> redirect(to: "/login")
+    |> Phoenix.Controller.redirect(to: "/login")
   end
 
   defp demo_user,

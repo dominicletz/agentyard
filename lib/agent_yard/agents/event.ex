@@ -32,9 +32,13 @@ defmodule AgentYard.Agents.Event do
   def to_payload(%__MODULE__{} = event) do
     event
     |> Map.from_struct()
-    |> Enum.reject(fn {_key, value} -> is_nil(value) end)
-    |> Map.new()
-    |> Map.update("raw", nil, &mask_raw/1)
+    |> Enum.reduce(%{}, fn {key, value}, acc ->
+      if is_nil(value) do
+        acc
+      else
+        Map.put(acc, Atom.to_string(key), mask_raw(value))
+      end
+    end)
   end
 
   def from_payload(payload) when is_map(payload) do

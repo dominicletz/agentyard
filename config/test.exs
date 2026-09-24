@@ -1,8 +1,14 @@
 import Config
 
 config :agentyard,
-  start_repo: false,
+  start_repo: not is_nil(System.get_env("DATABASE_URL")),
   demo_mode: false
+
+if database_url = System.get_env("DATABASE_URL") do
+  config :agentyard, AgentYard.Repo,
+    url: database_url,
+    pool_size: 5
+end
 
 config :agentyard, AgentYardWeb.Endpoint,
   server: false,

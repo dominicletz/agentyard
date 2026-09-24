@@ -13,6 +13,7 @@ defmodule AgentYard.Application do
         pubsub_child(),
         registry_child(),
         run_supervisor_child(),
+        recovery_child(),
         oban_child(),
         endpoint_child()
       ]
@@ -34,6 +35,12 @@ defmodule AgentYard.Application do
 
   defp run_supervisor_child do
     {DynamicSupervisor, strategy: :one_for_one, name: AgentYard.Runs.Supervisor}
+  end
+
+  defp recovery_child do
+    if Application.get_env(:agentyard, :start_repo, true) do
+      AgentYard.Runs.Recovery
+    end
   end
 
   defp oban_child do

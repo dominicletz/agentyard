@@ -5,6 +5,8 @@ defmodule AgentYardWeb.Router do
   pipeline :browser do
     plug(:accepts, ["html"])
     plug(:fetch_session)
+    plug(:fetch_live_flash)
+    plug(:put_root_layout, html: {AgentYardWeb.Layouts, :root})
     plug(AgentYardWeb.UserAuth, :fetch_current_user)
     plug(:protect_from_forgery)
   end
@@ -24,7 +26,9 @@ defmodule AgentYardWeb.Router do
     post("/register", SessionController, :do_register)
     get("/logout", SessionController, :delete)
 
-    live_session :authenticated, on_mount: [{AgentYardWeb.UserAuth, :current_user}] do
+    live_session :authenticated,
+      on_mount: [{AgentYardWeb.UserAuth, :current_user}],
+      layout: {AgentYardWeb.Layouts, :app} do
       live("/runs", RunsLive.Index, :index)
       live("/runs/new", RunsLive.New, :new)
       live("/runs/:id", RunsLive.Show, :show)

@@ -1,7 +1,7 @@
 defmodule AgentYardWeb.Layouts do
   use AgentYardWeb, :html
 
-  embed_templates("layouts")
+  embed_templates("templates/layouts/*")
 
   def initials(nil), do: "AY"
 

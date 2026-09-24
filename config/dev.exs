@@ -3,7 +3,10 @@ import Config
 config :agentyard, AgentYardWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: String.to_integer(System.get_env("PORT") || "4000")],
   secret_key_base:
-    System.get_env("SECRET_KEY_BASE", "dev-only-secret-key-base-change-for-production-0123456789"),
+    System.get_env(
+      "SECRET_KEY_BASE",
+      "dev-only-secret-key-base-change-for-production-use-a-real-secret-0123456789"
+    ),
   debug_errors: true,
   code_reloader: true,
   check_origin: false,
