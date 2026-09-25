@@ -194,7 +194,7 @@ defmodule AgentYardWeb.WebhookController do
       else: {:error, :mentioner_lacks_write_access}
   end
 
-  defp reject_fork(%{"pull_request" => %{"head" => %{"repo" => %{"fork" => true}}}),
+  defp reject_fork(%{"pull_request" => %{"head" => %{"repo" => %{"fork" => true}}}}),
     do: {:error, :fork_pull_request_rejected}
 
   defp reject_fork(_issue), do: :ok
