@@ -14,6 +14,11 @@ defmodule AgentYard.Webhooks.PolicyTest do
              Policy.authorize_github_mention(%{
                "sender" => %{"author_association" => "MEMBER"}
              })
+
+    assert :ok =
+             Policy.authorize_github_mention(%{
+               "comment" => %{"author_association" => "COLLABORATOR"}
+             })
   end
 
   test "does not mistake installation permissions for mentioner permissions" do

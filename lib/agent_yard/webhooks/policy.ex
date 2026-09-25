@@ -21,10 +21,14 @@ defmodule AgentYard.Webhooks.Policy do
     sender = payload["sender"] || %{}
     permissions = sender["permissions"] || %{}
 
+    association =
+      sender["author_association"] ||
+        get_in(payload, ["comment", "author_association"])
+
     if truthy?(permissions["push"]) or
          truthy?(permissions["maintain"]) or
          truthy?(permissions["admin"]) or
-         String.upcase(to_string(sender["author_association"] || "")) in @github_write_associations do
+         String.upcase(to_string(association || "")) in @github_write_associations do
       :ok
     else
       {:error, :mentioner_lacks_write_access}

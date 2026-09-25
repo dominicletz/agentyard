@@ -38,6 +38,9 @@ defmodule AgentYard.AgentProfiles do
       value when is_map(value) ->
         attrs
 
+      value when is_binary(value) and byte_size(value) == 0 ->
+        Map.put(attrs, :mcp_servers, %{})
+
       value when is_binary(value) ->
         case Jason.decode(value) do
           {:ok, decoded} when is_map(decoded) -> Map.put(attrs, :mcp_servers, decoded)
