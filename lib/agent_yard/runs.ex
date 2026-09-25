@@ -5,8 +5,8 @@ defmodule AgentYard.Runs do
 
   import Ecto.Query, warn: false
   alias AgentYard.Accounts.{Team, User}
-  alias AgentYard.Agents.Event
   alias AgentYard.AgentProfiles.Profile
+  alias AgentYard.Agents.Event
   alias AgentYard.Repo
   alias AgentYard.Repositories.Repository
   alias AgentYard.Runs.{Run, RunEvent, RunProcess, Session, Worker}
