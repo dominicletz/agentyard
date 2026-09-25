@@ -50,7 +50,11 @@ defmodule AgentYardWeb.Api.RunControllerTest do
       assert status in ["running", "succeeded"]
 
       assert TestFactory.eventually(fn ->
-               Repo.exists?(from(event in RunEvent, where: event.run_id == ^run_id))
+               Repo.exists?(
+                 from(event in RunEvent,
+                   where: event.run_id == ^run_id and event.kind == "assistant_delta"
+                 )
+               )
              end)
 
       conn = get(authenticated(context.conn, context.api_token), "/api/runs/#{run_id}/events")

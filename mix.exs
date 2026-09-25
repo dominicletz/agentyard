@@ -35,6 +35,7 @@ defmodule AgentYard.MixProject do
       {:phoenix_live_view, "~> 1.2.12"},
       {:postgrex, "~> 0.22.4"},
       {:jason, "~> 1.4"},
+      {:lazy_html, "~> 0.1.12", only: :test},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.1"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
