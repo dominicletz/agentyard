@@ -61,4 +61,30 @@ defmodule AgentYard.Runs.GitOrchestratorTest do
     assert_received :commit_and_push_called
     assert_received :open_change_called
   end
+
+  test "captures tracked and untracked workspace changes as a real patch" do
+    workspace =
+      Path.join(
+        System.tmp_dir!(),
+        "agentyard-git-diff-#{System.unique_integer([:positive])}"
+      )
+
+    on_exit(fn -> File.rm_rf!(workspace) end)
+
+    assert {:ok, _} = Command.run(["init", "-b", "main", workspace])
+    assert {:ok, _} = Command.run(["-C", workspace, "config", "user.name", "AgentYard"])
+    assert {:ok, _} = Command.run(["-C", workspace, "config", "user.email", "agent@example.test"])
+    assert :ok = File.write(Path.join(workspace, "tracked.txt"), "before\n")
+    assert {:ok, _} = Command.run(["-C", workspace, "add", "tracked.txt"])
+    assert {:ok, _} = Command.run(["-C", workspace, "commit", "-m", "seed"])
+    assert :ok = File.write(Path.join(workspace, "tracked.txt"), "after\n")
+    assert :ok = File.write(Path.join(workspace, "new.txt"), "new file\n")
+
+    assert {:ok, diff} = GitOrchestrator.workspace_diff(%{workspace: workspace})
+    assert diff =~ "tracked.txt"
+    assert diff =~ "-before"
+    assert diff =~ "+after"
+    assert diff =~ "new.txt"
+    assert diff =~ "+new file"
+  end
 end

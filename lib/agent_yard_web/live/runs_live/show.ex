@@ -79,7 +79,7 @@ defmodule AgentYardWeb.RunsLive.Show do
       <div class="metric-card"><span>Elapsed</span><strong><%= elapsed(@run) %></strong></div>
       <div class="metric-card"><span>Tokens</span><strong><%= (@run.input_tokens || 0) + (@run.output_tokens || 0) %></strong><small><%= @run.input_tokens || 0 %> in · <%= @run.output_tokens || 0 %> out</small></div>
       <div class="metric-card"><span>Cost</span><strong>$<%= money(@run.cost_usd) %></strong></div>
-      <div class="metric-card"><span>Files touched</span><strong>—</strong><small>available after provider diff</small></div>
+      <div class="metric-card"><span>Files touched</span><strong><%= diff_file_count(@events) %></strong><small>from the persisted workspace diff</small></div>
     </div>
 
     <div class="detail-layout">
@@ -104,6 +104,7 @@ defmodule AgentYardWeb.RunsLive.Show do
         </form>
         <div class="inspection-panels">
           <section class="panel side-card"><h2>Terminal output</h2><pre class="terminal-output"><%= terminal_output(@events) %></pre></section>
+          <section class="panel side-card"><h2>Workspace diff</h2><pre class="terminal-output"><%= workspace_diff(@events) %></pre></section>
           <section class="panel side-card"><h2>Diff signals</h2><pre class="terminal-output"><%= diff_signals(@events) %></pre></section>
         </div>
       </section>
@@ -127,6 +128,7 @@ defmodule AgentYardWeb.RunsLive.Show do
   defp event_label("usage"), do: "Usage"
   defp event_label("result"), do: "Result"
   defp event_label("done"), do: "Finished"
+  defp event_label("workspace_diff"), do: "Workspace diff"
   defp event_label("error"), do: "Error"
   defp event_label(kind), do: kind
 
@@ -138,7 +140,7 @@ defmodule AgentYardWeb.RunsLive.Show do
   defp event_text(_), do: nil
 
   defp event_payload(%{payload: payload}) do
-    payload["input"] || payload["output"] || payload["text"]
+    payload["diff"] || payload["input"] || payload["output"] || payload["text"]
   end
 
   defp terminal_output(events) do
@@ -165,6 +167,22 @@ defmodule AgentYardWeb.RunsLive.Show do
       "" -> "No tool or diff signals yet."
       output -> output
     end
+  end
+
+  defp workspace_diff(events) do
+    case Enum.find(events, &(&1.kind == "workspace_diff")) do
+      %{payload: %{"diff" => diff}} when is_binary(diff) and diff != "" -> diff
+      _ -> "No workspace changes recorded."
+    end
+  end
+
+  defp diff_file_count(events) do
+    events
+    |> workspace_diff()
+    |> then(fn
+      "No workspace changes recorded." -> 0
+      diff -> Regex.scan(~r/^diff --git /m, diff) |> length()
+    end)
   end
 
   defp event_time(nil), do: ""

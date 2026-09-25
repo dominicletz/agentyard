@@ -60,6 +60,23 @@ defmodule AgentYard.Runs.GitOrchestrator do
     end
   end
 
+  @doc """
+  Captures the durable patch for a prepared workspace before publication.
+
+  Intent-to-add makes untracked files visible to `git diff` without committing
+  them. The resulting patch is persisted in the run event stream by
+  `RunProcess`, so cleanup cannot erase the inspection artifact.
+  """
+  def workspace_diff(%{workspace: workspace}) when is_binary(workspace) do
+    with {:ok, _} <- Command.run(["-C", workspace, "add", "-N", "--", "."]),
+         {:ok, diff} <-
+           Command.run(["-C", workspace, "diff", "--no-ext-diff", "--binary", "HEAD", "--", "."]) do
+      {:ok, diff}
+    end
+  end
+
+  def workspace_diff(_config), do: {:ok, ""}
+
   def provider_for("gitlab"), do: GitLab
   def provider_for(_forge), do: GitHub
 

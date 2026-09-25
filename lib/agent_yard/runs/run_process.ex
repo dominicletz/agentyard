@@ -165,6 +165,8 @@ defmodule AgentYard.Runs.RunProcess do
   defp complete_run(%{failed: true} = state), do: finish_run(state)
 
   defp complete_run(state) do
+    state = persist_workspace_diff(state)
+
     case GitOrchestrator.finalize(state.run, state.run_config) do
       {:ok, change, events} ->
         state = persist_events(state, events)
@@ -226,12 +228,28 @@ defmodule AgentYard.Runs.RunProcess do
     do: Enum.reduce(events, state, &persist_event(&2, &1))
 
   defp persist_event(state, %Event{} = event) do
+    event = Event.mask(event, state.secret_values)
     {:ok, record} = Runs.record_event(state.run, event)
     {:ok, run} = Runs.apply_event(state.run, event)
     Runs.broadcast(run, {:run_event, run.id, record})
     Runs.broadcast(run, {:run_updated, run})
     %{state | run: run}
   end
+
+  defp persist_workspace_diff(%{run_config: config} = state) when is_map(config) do
+    case GitOrchestrator.workspace_diff(config) do
+      {:ok, diff} ->
+        persist_event(state, Event.workspace_diff(diff))
+
+      {:error, reason} ->
+        persist_event(
+          state,
+          Event.status("Workspace diff unavailable: #{safe_message(reason, state.secret_values)}")
+        )
+    end
+  end
+
+  defp persist_workspace_diff(state), do: persist_event(state, Event.workspace_diff(""))
 
   defp track_turn(state, %Event{type: "tool_call"}), do: %{state | turns: state.turns + 1}
   defp track_turn(state, _event), do: state

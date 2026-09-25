@@ -1,10 +1,21 @@
 defmodule AgentYard.Agents.Event do
   @moduledoc "The provider-neutral event vocabulary stored in a run timeline."
 
-  @types ~w(status assistant_delta tool_call tool_result usage result error done)
+  @types ~w(status assistant_delta tool_call tool_result usage result error done workspace_diff)
 
   @enforce_keys [:type]
-  defstruct [:type, :text, :tool, :input, :output, :usage, :cost_usd, :message, :raw]
+  defstruct [
+    :type,
+    :text,
+    :tool,
+    :input,
+    :output,
+    :usage,
+    :cost_usd,
+    :message,
+    :diff,
+    :raw
+  ]
 
   @type t :: %__MODULE__{
           type: String.t(),
@@ -15,6 +26,7 @@ defmodule AgentYard.Agents.Event do
           usage: map() | nil,
           cost_usd: number() | nil,
           message: String.t() | nil,
+          diff: String.t() | nil,
           raw: map() | nil
         }
 
@@ -27,6 +39,7 @@ defmodule AgentYard.Agents.Event do
   def usage(usage), do: %__MODULE__{type: "usage", usage: usage}
   def result(message), do: %__MODULE__{type: "result", message: message}
   def error(message), do: %__MODULE__{type: "error", message: message}
+  def workspace_diff(diff), do: %__MODULE__{type: "workspace_diff", diff: diff}
   def done, do: %__MODULE__{type: "done"}
 
   @doc """
@@ -73,6 +86,7 @@ defmodule AgentYard.Agents.Event do
       "usage" => :usage,
       "cost_usd" => :cost_usd,
       "message" => :message,
+      "diff" => :diff,
       "raw" => :raw
     }
 
