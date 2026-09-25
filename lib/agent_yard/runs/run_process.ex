@@ -277,8 +277,17 @@ defmodule AgentYard.Runs.RunProcess do
 
   defp cleanup(%{sandbox: sandbox, run_config: config}) do
     _ = sandbox.cleanup(config || %{})
+    _ = cleanup_mcp_config(config)
     :ok
   end
+
+  defp cleanup_mcp_config(%{mcp_config_path: path}) when is_binary(path) do
+    path
+    |> Path.dirname()
+    |> File.rm_rf()
+  end
+
+  defp cleanup_mcp_config(_config), do: :ok
 
   defp cancel_timeout(%{timeout_ref: nil} = state), do: state
 
@@ -348,6 +357,7 @@ defmodule AgentYard.Runs.RunProcess do
       run_id: run.id,
       model: profile.model,
       base_url: profile.base_url,
+      mcp_servers: profile.mcp_servers || %{},
       instructions: profile.instructions,
       permission_mode: profile.permission_mode,
       budget_usd: profile.budget_usd,

@@ -106,7 +106,7 @@ defmodule AgentYardWeb.Api.RunControllerTest do
       assert run_usage["data"]["run_id"] == run_id
       assert run_usage["data"]["input_tokens"] == 420
       assert run_usage["data"]["output_tokens"] == 180
-      assert run_usage["data"]["cost_usd"] == "0"
+      assert run_usage["data"]["cost_usd"] == "0.040000"
 
       session_usage =
         context.conn

@@ -13,6 +13,7 @@ defmodule AgentYard.AgentProfiles.Profile do
     field(:provider, :string, default: "fake")
     field(:model, :string)
     field(:base_url, :string)
+    field(:mcp_servers, :map, default: %{})
     field(:instructions, :string)
     field(:permission_mode, :string, default: "accept_edits")
     field(:budget_usd, :decimal)
@@ -35,6 +36,7 @@ defmodule AgentYard.AgentProfiles.Profile do
       :provider,
       :model,
       :base_url,
+      :mcp_servers,
       :instructions,
       :permission_mode,
       :budget_usd,
