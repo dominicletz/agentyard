@@ -42,12 +42,19 @@ defmodule AgentYardWeb.Router do
     pipe_through(:api)
 
     get("/openapi.yaml", OpenAPIController, :show)
+    get("/repositories", RepositoryController, :index)
     get("/runs", RunController, :index)
     post("/runs", RunController, :create)
     get("/runs/:id", RunController, :show)
+    get("/runs/:id/usage", RunController, :usage)
     post("/runs/:id/followups", RunController, :follow_up)
     post("/runs/:id/cancel", RunController, :cancel)
     get("/runs/:id/events", RunController, :events)
     get("/runs/:id/events/stream", RunController, :stream)
+  end
+
+  scope "/webhooks", AgentYardWeb do
+    post("/github", WebhookController, :github)
+    post("/gitlab", WebhookController, :gitlab)
   end
 end

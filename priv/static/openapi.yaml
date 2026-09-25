@@ -8,6 +8,12 @@ servers:
 security:
   - bearerAuth: []
 paths:
+  /api/repositories:
+    get:
+      summary: List repositories available to the caller's team
+      responses:
+        "200":
+          description: Repository list
   /api/runs:
     get:
       summary: List team runs
@@ -33,6 +39,14 @@ paths:
       responses:
         "200":
           description: Run
+  /api/runs/{id}/usage:
+    get:
+      summary: Get token and USD usage for a run
+      parameters:
+        - $ref: "#/components/parameters/RunId"
+      responses:
+        "200":
+          description: Run usage
   /api/runs/{id}/followups:
     post:
       summary: Start a follow-up run in the same session

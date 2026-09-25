@@ -105,6 +105,19 @@ defmodule AgentYard.Accounts do
     |> Repo.one()
   end
 
+  def get_team(id), do: Repo.get(Team, id)
+
+  def first_member(%Team{id: team_id}) do
+    from(m in Membership,
+      join: u in assoc(m, :user),
+      where: m.team_id == ^team_id,
+      order_by: [asc: m.inserted_at],
+      limit: 1,
+      select: u
+    )
+    |> Repo.one()
+  end
+
   def create_api_token(%User{} = user, name \\ "default") do
     raw = "ay_" <> Base.url_encode64(:crypto.strong_rand_bytes(32), padding: false)
 

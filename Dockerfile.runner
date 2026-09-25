@@ -1,0 +1,35 @@
+FROM debian:bookworm-slim
+
+# Claude publishes versioned binaries. Cursor's public installer currently
+# exposes only the latest channel, so the build fails unless CI supplies the
+# expected version and verifies the installer output below.
+ARG CLAUDE_CODE_VERSION=2.1.258
+ARG CURSOR_CLI_VERSION
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    DISABLE_AUTOUPDATER=1 \
+    LANG=C.UTF-8
+
+RUN apt-get update -qq \
+    && apt-get install -y --no-install-recommends bash ca-certificates curl git openssh-client \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN curl -fsSL \
+      "https://downloads.claude.ai/claude-code-releases/${CLAUDE_CODE_VERSION}/linux-x64/claude" \
+      -o /usr/local/bin/claude \
+    && chmod 0755 /usr/local/bin/claude
+
+RUN test -n "${CURSOR_CLI_VERSION}" \
+    && curl https://cursor.com/install -fsS | bash \
+    && cp /root/.local/bin/agent /usr/local/bin/agent \
+    && ln -s /usr/local/bin/agent /usr/local/bin/cursor-agent \
+    && agent_version="$(/usr/local/bin/agent --version)" \
+    && printf '%s\n' "${agent_version}" \
+    && printf '%s\n' "${agent_version}" | grep -F "${CURSOR_CLI_VERSION}"
+
+RUN useradd --create-home --shell /bin/bash runner \
+    && mkdir -p /workspace \
+    && chown runner:runner /workspace
+
+WORKDIR /workspace
+USER runner

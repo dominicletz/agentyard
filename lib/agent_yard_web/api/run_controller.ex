@@ -27,6 +27,22 @@ defmodule AgentYardWeb.Api.RunController do
     json(conn, %{data: run_json(run)})
   end
 
+  def usage(%{assigns: %{team: team}} = conn, %{"id" => id}) do
+    run = Runs.get_run!(id, team)
+
+    json(conn, %{
+      data: %{
+        run_id: run.id,
+        session_id: run.session_id,
+        input_tokens: run.input_tokens || 0,
+        output_tokens: run.output_tokens || 0,
+        cache_tokens: run.cache_tokens || 0,
+        cost_usd: decimal(run.cost_usd),
+        budget_usd: decimal(run.session.agent_profile.budget_usd)
+      }
+    })
+  end
+
   def follow_up(%{assigns: %{current_user: user, team: team}} = conn, %{"id" => id} = params) do
     run = Runs.get_run!(id, team)
 
