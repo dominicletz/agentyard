@@ -85,6 +85,31 @@ Set `DEMO_MODE=false` in production. The seeded demo account
 (`demo@agentyard.local` / `demo-password`) is for local development only and
 must not be enabled on a production deployment.
 
+### Passwordless sign-in email
+
+The login page supports both the existing password flow and one-time magic
+links. Magic-link tokens are stored as SHA-256 hashes, expire after 30 minutes,
+and are consumed once. Development uses Swoosh's local in-memory mailbox;
+tests use the Swoosh test adapter.
+
+Production uses Swoosh SMTP. Set these environment variables:
+
+```text
+MAILER_FROM             # required sender address
+MAILER_FROM_NAME        # optional, defaults to AgentYard
+SMTP_RELAY              # required SMTP hostname
+SMTP_USERNAME           # required SMTP username
+SMTP_PASSWORD           # required SMTP password
+SMTP_PORT               # optional, defaults to 587
+SMTP_TLS                # optional, defaults to always
+SMTP_AUTH               # optional, defaults to always
+SMTP_SSL                # optional, defaults to false; use for implicit TLS
+```
+
+Set `PHX_HOST` to the public HTTPS hostname so links point to the deployed
+AgentYard instance. For implicit TLS on port 465, set `SMTP_SSL=true` and
+`SMTP_TLS=never`.
+
 ## What is implemented
 
 - Phoenix Endpoint, LiveView UI and responsive light theme for Runs, New run,
@@ -92,32 +117,44 @@ must not be enabled on a production deployment.
 - Ecto/Postgres schemas for users, teams, memberships, repositories, profiles,
   secrets, sessions, runs and normalized event logs.
 - Password authentication, team membership roles (`owner`, `admin`, `member`),
-  session auth, personal bearer API tokens and team-scoped authorization.
+  session auth, passwordless magic-link login, personal bearer API tokens and
+  team-scoped authorization.
 - OTP `DynamicSupervisor` plus a per-run `GenServer`, PubSub timeline updates
   and an Oban worker boundary for queued runs.
 - Normalized agent adapter behaviour with fake/scripted, Claude Code,
   Cursor CLI (`cursor-agent` or `agent`) and OpenRouter adapters.
 - Claude/Cursor line-delimited stream JSON parsing with recorded event
   fixtures in `test/fixtures`.
-- Pluggable local and Docker sandbox behaviours, plus Git provider behaviours
-  for GitHub pull requests and GitLab merge requests.
+- Per-run local and Docker sandbox preparation with resource defaults, plus Git
+  provider behaviours for GitHub pull requests and GitLab merge requests.
 - AES-256-GCM encrypted, write-only secrets and redaction-safe event payloads.
 - REST create/get/list/follow-up/cancel/event endpoints, persisted event
   history and an SSE stream with `Last-Event-ID` support.
 - A checked-in OpenAPI document at `/api/openapi.yaml`.
-- Docker Compose, Dockerfile and GitHub Actions checks.
+- Docker Compose, Dockerfile, a pinned runner image skeleton
+  (`Dockerfile.runner`) and GitHub Actions checks.
 
-## Deliberate boundaries of this first PR
+## Deliberate boundaries
 
-The fake adapter is the only fully end-to-end provider in the seeded flow.
-Claude Code, Cursor CLI and OpenRouter adapters are implemented behind the
-same interface, but production images still need their CLI/key configuration.
-The GitHub/GitLab providers expose clone, branch, commit/push and PR/MR
-operations, but automatic forge orchestration and webhook/@mention triggers
-are next-step work. Docker and local runners are pluggable foundations;
-wiring repository environment builds and strict network policy into every run
-is not yet complete. SSO, invitation email, auditing UI, CI feedback loops and
-remote/Kubernetes runners remain roadmap items.
+The Fake adapter is fully end-to-end without model or forge credentials.
+Claude Code, Cursor CLI and OpenRouter use the same run path and receive
+profile settings plus scoped team/repository environment values, but their
+CLI binaries and provider credentials must still be installed/configured by
+the operator. GitHub/GitLab clone, branch, commit/push and PR/MR orchestration
+is wired; runs without forge tokens emit a clear skip event instead of
+attempting a write.
+
+Docker runs default to a deny-all network. An allowlist must be resolved by an
+explicit operator policy hook that returns an egress-controlled Docker network;
+AgentYard never falls back to unrestricted bridge networking. Image builds
+from repository configuration and persistent follow-up volumes still need
+hardening. Webhook signature, fail-closed fork/mention policy, label dispatch,
+and best-effort progress/result comments are wired; GitHub App installation UX
+and live forge permission lookups remain outside this milestone. Persisted
+workspace diffs, repository/session usage APIs, profile MCP configuration, and
+pinned Claude/Cursor runner binaries are included. SSO, invitation email, CI
+feedback loops, audit exports and remote/Kubernetes runners remain out of this
+milestone.
 
 ## Architecture
 
@@ -155,11 +192,19 @@ See [`priv/static/openapi.yaml`](priv/static/openapi.yaml) or
 ## Roadmap
 
 The complete catalog is in [`docs/FEATURES.md`](docs/FEATURES.md) and
-[`docs/FEATURES.csv`](docs/FEATURES.csv). Next increments should wire
-forge-native webhooks and safe clone/branch/PR orchestration, then complete
-Docker environment builds, provider credentials, invitations/audit events,
-and GitLab self-managed validation. Slack/Jira triggers, OIDC/SAML, remote
-runner pools, Helm and richer review workflows follow in v1.
+[`docs/FEATURES.csv`](docs/FEATURES.csv). Next increments should add GitHub
+App installation and live forge permission lookups, then complete Docker
+environment builds, provider credentials, invitations/audit exports, and
+GitLab self-managed validation. Slack/Jira triggers, OIDC/SAML, remote runner
+pools, Helm and richer review workflows follow in v1.
 
 Product and technical rationale: [`docs/CONCEPT.md`](docs/CONCEPT.md).
+
+## Implementation status
+
+The current MVP gap map is tracked in
+[`docs/IMPLEMENTATION-TODO.md`](docs/IMPLEMENTATION-TODO.md). Remaining
+boundaries are deliberate: forge App installation and live permission APIs,
+operator-provided Docker egress policy, ACP runtime transport, and audit
+exports.
 Static visual references: [`docs/prototype/`](docs/prototype/).

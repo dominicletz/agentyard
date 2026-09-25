@@ -22,6 +22,9 @@ defmodule AgentYardWeb.Router do
     get("/", PageController, :home)
     get("/login", SessionController, :new)
     post("/login", SessionController, :create)
+    get("/login/magic/sent", SessionController, :magic_link_sent)
+    post("/login/magic", SessionController, :request_magic_link)
+    get("/login/magic/:token", SessionController, :consume_magic_link)
     get("/register", SessionController, :register)
     post("/register", SessionController, :do_register)
     get("/logout", SessionController, :delete)
@@ -42,12 +45,20 @@ defmodule AgentYardWeb.Router do
     pipe_through(:api)
 
     get("/openapi.yaml", OpenAPIController, :show)
+    get("/repositories", RepositoryController, :index)
     get("/runs", RunController, :index)
     post("/runs", RunController, :create)
     get("/runs/:id", RunController, :show)
+    get("/runs/:id/usage", RunController, :usage)
+    get("/sessions/:id/usage", RunController, :session_usage)
     post("/runs/:id/followups", RunController, :follow_up)
     post("/runs/:id/cancel", RunController, :cancel)
     get("/runs/:id/events", RunController, :events)
     get("/runs/:id/events/stream", RunController, :stream)
+  end
+
+  scope "/webhooks", AgentYardWeb do
+    post("/github", WebhookController, :github)
+    post("/gitlab", WebhookController, :gitlab)
   end
 end

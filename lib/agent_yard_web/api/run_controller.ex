@@ -27,6 +27,43 @@ defmodule AgentYardWeb.Api.RunController do
     json(conn, %{data: run_json(run)})
   end
 
+  def usage(%{assigns: %{team: team}} = conn, %{"id" => id}) do
+    run = Runs.get_run!(id, team)
+
+    json(conn, %{
+      data: %{
+        run_id: run.id,
+        session_id: run.session_id,
+        input_tokens: run.input_tokens || 0,
+        output_tokens: run.output_tokens || 0,
+        cache_tokens: run.cache_tokens || 0,
+        cost_usd: decimal(run.cost_usd),
+        budget_usd: decimal(run.session.agent_profile.budget_usd)
+      }
+    })
+  end
+
+  def session_usage(%{assigns: %{team: team}} = conn, %{"id" => id}) do
+    session = Runs.get_session!(id, team)
+    usage = Runs.session_usage(session)
+
+    json(conn, %{
+      data: %{
+        session_id: usage.session_id,
+        run_count: usage.run_count,
+        input_tokens: usage.input_tokens,
+        output_tokens: usage.output_tokens,
+        cache_tokens: usage.cache_tokens,
+        cost_usd: decimal(usage.cost_usd),
+        budget_usd: decimal(usage.budget_usd),
+        runs:
+          Enum.map(usage.runs, fn run ->
+            Map.update!(run, :cost_usd, &decimal/1)
+          end)
+      }
+    })
+  end
+
   def follow_up(%{assigns: %{current_user: user, team: team}} = conn, %{"id" => id} = params) do
     run = Runs.get_run!(id, team)
 
@@ -116,6 +153,11 @@ defmodule AgentYardWeb.Api.RunController do
       base_branch: run.base_branch,
       branch_name: run.branch_name,
       adapter: run.adapter,
+      auto_pr: run.auto_pr,
+      environment: run.environment,
+      issue_url: run.issue_url,
+      timeout_seconds: run.timeout_seconds,
+      max_turns: run.max_turns,
       usage: %{
         input_tokens: run.input_tokens || 0,
         output_tokens: run.output_tokens || 0,
@@ -126,6 +168,7 @@ defmodule AgentYardWeb.Api.RunController do
       merge_request_url: run.merge_request_url,
       error: run.error,
       session_id: run.session_id,
+      repository_id: run.session.repository_id,
       inserted_at: run.inserted_at
     }
   end

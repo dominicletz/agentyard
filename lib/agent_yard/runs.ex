@@ -7,12 +7,14 @@ defmodule AgentYard.Runs do
   alias AgentYard.Accounts.{Team, User}
   alias AgentYard.AgentProfiles.Profile
   alias AgentYard.Agents.Event
+  alias AgentYard.Audit
   alias AgentYard.Repo
   alias AgentYard.Repositories.Repository
   alias AgentYard.Runs.{Run, RunEvent, RunProcess, Session, Worker}
 
   @topic_prefix "run:"
   @team_topic_prefix "team:"
+  @mutation_roles ~w(owner admin member)
 
   def list_runs(%Team{id: team_id}, filters \\ %{}) do
     Run
@@ -38,6 +40,13 @@ defmodule AgentYard.Runs do
     |> Repo.get(id)
   end
 
+  def get_session!(id, %Team{id: team_id}) do
+    Session
+    |> where([s], s.id == ^id and s.team_id == ^team_id)
+    |> preload([:repository, :agent_profile])
+    |> Repo.one!()
+  end
+
   def active_runs do
     from(r in Run,
       where: r.status in ["queued", "running"],
@@ -47,10 +56,17 @@ defmodule AgentYard.Runs do
   end
 
   def create_run(%User{} = user, %Team{id: team_id}, attrs) do
+    with :ok <- AgentYard.Accounts.authorize(user, %Team{id: team_id}, @mutation_roles) do
+      create_run_for_authorized(user, team_id, attrs)
+    end
+  end
+
+  defp create_run_for_authorized(%User{} = user, team_id, attrs) do
     repository = Repo.get_by!(Repository, id: attr(attrs, :repository_id), team_id: team_id)
     profile = Repo.get_by!(Profile, id: attr(attrs, :agent_profile_id), team_id: team_id)
     branch = attr(attrs, :branch_name) || generated_branch()
     prompt = attr(attrs, :prompt)
+    environment = execution_environment(attr(attrs, :environment), profile.provider)
 
     Repo.transaction(fn ->
       {:ok, session} =
@@ -74,12 +90,25 @@ defmodule AgentYard.Runs do
         base_branch: attr(attrs, :base_branch) || repository.default_branch,
         branch_name: branch,
         adapter: profile.provider,
+        auto_pr: boolean_attr(attrs, :auto_pr, true),
+        environment: environment,
+        issue_url: attr(attrs, :issue_url),
+        timeout_seconds: integer_attr(attrs, :timeout_seconds, 3600),
+        max_turns: integer_attr(attrs, :max_turns, nil),
         status: "queued"
       })
       |> Repo.insert()
     end)
     |> unwrap_transaction()
+    |> audit_created(user)
   end
+
+  defp audit_created(%Run{} = run, user) do
+    _ = Audit.log(run.team_id, user.id, "run.created", "run", run.id)
+    run
+  end
+
+  defp audit_created(result, _user), do: result
 
   def follow_up(%Run{} = run, %User{} = user, prompt) when is_binary(prompt) do
     with :ok <- authorize_run(run, user) do
@@ -95,27 +124,86 @@ defmodule AgentYard.Runs do
         base_branch: run.base_branch,
         branch_name: run.branch_name,
         adapter: run.adapter,
+        auto_pr: run.auto_pr,
+        environment: run.environment,
+        issue_url: run.issue_url,
+        timeout_seconds: run.timeout_seconds,
+        max_turns: run.max_turns,
         status: "queued"
       })
       |> Repo.insert()
     end
   end
 
-  def enqueue_run(%Run{id: run_id}) do
-    run_id
+  def enqueue_run(%Run{id: run_id, team_id: team_id, session_id: session_id}) do
+    %{"run_id" => run_id, "team_id" => team_id, "session_id" => session_id}
     |> Worker.new()
     |> Oban.insert()
   end
 
-  def start_run(%Run{id: run_id}), do: start_live_run(run_id)
+  @doc """
+  Queue a run for asynchronous execution.
+
+  The old direct-start entry point is intentionally retained as the public API,
+  but it now inserts an Oban job so LiveViews and REST callers never block on
+  clone, sandbox or provider startup.
+  """
+  def start_run(%Run{} = run), do: enqueue_run(run)
 
   def start_live_run(run_id) do
+    case get_run(run_id) do
+      %Run{status: "queued"} = run ->
+        start_queued_run(run)
+
+      %Run{status: "running"} = run ->
+        recover_running_run(run)
+
+      %Run{status: status} when status in ["succeeded", "failed", "cancelled"] ->
+        {:error, {:invalid_run_status, status}}
+
+      nil ->
+        {:error, :run_not_found}
+    end
+  end
+
+  defp start_queued_run(run) do
+    if concurrency_available?(run),
+      do: start_run_process(run.id),
+      else: {:error, :concurrency_limit}
+  end
+
+  defp recover_running_run(run) do
+    case Registry.lookup(AgentYard.Runs.Registry, run.id) do
+      [{pid, _}] -> {:ok, pid}
+      [] -> start_run_process(run.id)
+    end
+  end
+
+  defp start_run_process(run_id) do
     child = {RunProcess, run_id}
 
     case DynamicSupervisor.start_child(AgentYard.Runs.Supervisor, child) do
       {:error, {:already_started, pid}} -> {:ok, pid}
       result -> result
     end
+  end
+
+  def team_concurrency_limit,
+    do: Application.get_env(:agentyard, :run_concurrency_limit, 2)
+
+  def concurrency_available?(%Run{team_id: team_id, session_id: session_id}) do
+    running_count =
+      from(r in Run, where: r.team_id == ^team_id and r.status == "running", select: count(r.id))
+      |> Repo.one()
+
+    session_running? =
+      from(r in Run,
+        where: r.session_id == ^session_id and r.status == "running",
+        select: count(r.id)
+      )
+      |> Repo.one()
+
+    running_count < team_concurrency_limit() and session_running? == 0
   end
 
   def cancel(%Run{} = run, %User{} = user) do
@@ -172,15 +260,70 @@ defmodule AgentYard.Runs do
   def apply_event(%Run{} = run, _event), do: {:ok, run}
 
   def update_usage(%Run{} = run, usage) do
-    update_run(run, %{
+    attrs = %{
       input_tokens: usage_value(usage, "input_tokens", :input_tokens, run.input_tokens),
       output_tokens: usage_value(usage, "output_tokens", :output_tokens, run.output_tokens),
       cache_tokens: usage_value(usage, "cache_tokens", :cache_tokens, run.cache_tokens)
-    })
+    }
+
+    case usage_cost(usage) do
+      nil -> update_run(run, attrs)
+      cost -> update_run(run, Map.put(attrs, :cost_usd, cost))
+    end
+  end
+
+  @doc """
+  Aggregates usage for all runs in a team-owned session.
+
+  The run rows are also returned so API consumers can reconcile the aggregate
+  without querying every run separately.
+  """
+  def session_usage(%Session{} = session) do
+    runs =
+      from(r in Run,
+        where: r.session_id == ^session.id and r.team_id == ^session.team_id,
+        order_by: [asc: r.inserted_at],
+        select: %{
+          id: r.id,
+          status: r.status,
+          input_tokens: r.input_tokens,
+          output_tokens: r.output_tokens,
+          cache_tokens: r.cache_tokens,
+          cost_usd: r.cost_usd
+        }
+      )
+      |> Repo.all()
+
+    %{
+      session_id: session.id,
+      run_count: length(runs),
+      input_tokens: Enum.sum(Enum.map(runs, &(&1.input_tokens || 0))),
+      output_tokens: Enum.sum(Enum.map(runs, &(&1.output_tokens || 0))),
+      cache_tokens: Enum.sum(Enum.map(runs, &(&1.cache_tokens || 0))),
+      cost_usd: Enum.reduce(runs, Decimal.new("0"), &add_cost/2),
+      budget_usd: session.agent_profile && session.agent_profile.budget_usd,
+      runs: Enum.map(runs, &session_run_usage/1)
+    }
   end
 
   def update_status(%Run{} = run, status, attrs \\ %{}) do
-    update_run(run, Map.merge(attrs, %{status: status}))
+    case update_run(run, Map.merge(attrs, %{status: status})) do
+      {:ok, updated} = result ->
+        _ =
+          Audit.log(
+            updated.team_id,
+            updated.user_id,
+            "run.status_changed",
+            "run",
+            updated.id,
+            %{status: status}
+          )
+
+        result
+
+      error ->
+        error
+    end
   end
 
   def update_run(%Run{} = run, attrs) do
@@ -211,10 +354,7 @@ defmodule AgentYard.Runs do
     do: Phoenix.PubSub.subscribe(AgentYard.PubSub, team_topic(team_id))
 
   def authorize_run(%Run{team_id: team_id}, %User{} = user) do
-    case AgentYard.Accounts.team_for_user(user) do
-      %Team{id: ^team_id} -> :ok
-      _ -> {:error, :forbidden}
-    end
+    AgentYard.Accounts.authorize(user, %Team{id: team_id}, @mutation_roles)
   end
 
   defp maybe_filter_status(query, %{status: status}) when status not in [nil, "", "all"],
@@ -235,6 +375,50 @@ defmodule AgentYard.Runs do
 
   defp attr(attrs, key), do: Map.get(attrs, key) || Map.get(attrs, to_string(key))
 
+  defp boolean_attr(attrs, key, default) do
+    case Map.fetch(attrs, key) do
+      {:ok, value} ->
+        parse_boolean(value)
+
+      :error ->
+        case Map.fetch(attrs, to_string(key)) do
+          {:ok, value} -> parse_boolean(value)
+          :error -> default
+        end
+    end
+  end
+
+  defp parse_boolean(value) when value in [true, "true", "1", 1], do: true
+  defp parse_boolean(_value), do: false
+
+  defp integer_attr(attrs, key, default) do
+    case attr(attrs, key) do
+      nil ->
+        default
+
+      value when is_integer(value) ->
+        value
+
+      value ->
+        case Integer.parse(to_string(value)) do
+          {integer, _} -> integer
+          :error -> default
+        end
+    end
+  end
+
+  defp execution_environment(value, _provider) when value in ["docker", :docker],
+    do: "docker"
+
+  defp execution_environment(value, _provider) when value in ["local", :local],
+    do: "local"
+
+  defp execution_environment(value, _provider)
+       when value in ["Repository default", "repository_default", nil, ""],
+       do: "local"
+
+  defp execution_environment(_value, _provider), do: "local"
+
   defp generated_branch do
     "agent/#{Date.utc_today()}/" <> (Ecto.UUID.generate() |> String.slice(0, 8))
   end
@@ -249,6 +433,32 @@ defmodule AgentYard.Runs do
 
   defp usage_value(usage, string_key, atom_key, current),
     do: Map.get(usage, string_key) || Map.get(usage, atom_key) || current || 0
+
+  defp usage_cost(usage) do
+    Map.get(usage, "cost_usd") ||
+      Map.get(usage, :cost_usd) ||
+      Map.get(usage, "total_cost_usd") ||
+      Map.get(usage, :total_cost_usd) ||
+      Map.get(usage, "cost") ||
+      Map.get(usage, :cost)
+  end
+
+  defp add_cost(%{cost_usd: nil}, total), do: total
+
+  defp add_cost(%{cost_usd: cost}, total) do
+    Decimal.add(total, Decimal.new(to_string(cost)))
+  end
+
+  defp session_run_usage(run) do
+    %{
+      id: run.id,
+      status: run.status,
+      input_tokens: run.input_tokens || 0,
+      output_tokens: run.output_tokens || 0,
+      cache_tokens: run.cache_tokens || 0,
+      cost_usd: run.cost_usd || Decimal.new("0")
+    }
+  end
 
   defp unwrap_transaction({:ok, value}), do: value
   defp unwrap_transaction({:error, reason}), do: {:error, reason}

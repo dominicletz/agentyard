@@ -25,7 +25,7 @@ defmodule AgentYard.TestFactory do
   end
 
   def user_team_fixture(opts \\ %{}) do
-    suffix = System.unique_integer([:positive])
+    suffix = Ecto.UUID.generate() |> String.replace("-", "")
 
     user =
       %User{}

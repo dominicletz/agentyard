@@ -1,7 +1,7 @@
 defmodule AgentYardWeb.ProfilesLive.Index do
   use AgentYardWeb, :live_view
 
-  alias AgentYard.AgentProfiles
+  alias AgentYard.{Accounts, AgentProfiles}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -16,9 +16,15 @@ defmodule AgentYardWeb.ProfilesLive.Index do
 
   @impl true
   def handle_event("create", params, socket) do
-    case AgentProfiles.create(socket.assigns.team.id, params) do
-      {:ok, _profile} -> {:noreply, assign(socket, profiles: profiles(socket), error: nil)}
-      {:error, changeset} -> {:noreply, assign(socket, error: inspect(changeset.errors))}
+    case Accounts.authorize(socket.assigns.current_user, socket.assigns.team, ~w(owner admin)) do
+      :ok ->
+        case AgentProfiles.create(socket.assigns.team.id, params) do
+          {:ok, _profile} -> {:noreply, assign(socket, profiles: profiles(socket), error: nil)}
+          {:error, changeset} -> {:noreply, assign(socket, error: inspect(changeset.errors))}
+        end
+
+      {:error, :forbidden} ->
+        {:noreply, assign(socket, error: "Only owners and admins can create profiles.")}
     end
   end
 
@@ -41,8 +47,10 @@ defmodule AgentYardWeb.ProfilesLive.Index do
         <%= if @error do %><p class="flash flash-error"><%= @error %></p><% end %>
         <form phx-submit="create" class="stack-form">
           <label>Name<input name="name" value="Fake demo agent" required /></label>
-          <label>Provider<select name="provider"><option value="fake">Fake / scripted</option><option value="claude_code">Claude Code</option><option value="cursor_cli">Cursor CLI</option><option value="openrouter">OpenRouter</option></select></label>
+          <label>Provider<select name="provider"><option value="fake">Fake / scripted</option><option value="claude_code">Claude Code</option><option value="cursor_cli">Cursor CLI</option><option value="openrouter">OpenRouter</option><option value="acp">ACP boundary (stub)</option></select></label>
           <label>Model<input name="model" placeholder="claude-sonnet-4-5" /></label>
+          <label>OpenAI-compatible base URL <span class="muted">(optional)</span><input name="base_url" placeholder="https://openrouter.ai/api/v1" /></label>
+          <label>MCP servers <span class="muted">(JSON, optional)</span><textarea name="mcp_servers" rows="4" placeholder='{"docs":{"command":"npx","args":["-y","mcp-docs"]}}'></textarea></label>
           <label>Permission mode<select name="permission_mode"><option value="accept_edits">Accept edits</option><option value="ask">Ask</option><option value="plan">Plan</option><option value="bypass">Bypass</option></select></label>
           <label>Instructions<textarea name="instructions" rows="4" placeholder="Repository-specific guidance…"></textarea></label>
           <label>Budget (USD)<input name="budget_usd" value="5.00" type="number" step="0.01" min="0.01" /></label>

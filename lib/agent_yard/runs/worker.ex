@@ -11,6 +11,8 @@ defmodule AgentYard.Runs.Worker do
   def perform(%Oban.Job{args: %{"run_id" => run_id}}) do
     case Runs.start_live_run(run_id) do
       {:ok, _pid} -> :ok
+      {:error, :concurrency_limit} -> {:snooze, 5}
+      {:error, {:invalid_run_status, "cancelled"}} -> :ok
       {:error, reason} -> {:error, reason}
     end
   end

@@ -46,4 +46,34 @@ if config_env() == :prod do
   config :agentyard,
     secret_key: secret_key,
     demo_mode: System.get_env("DEMO_MODE", "false") == "true"
+
+  smtp_relay =
+    System.get_env("SMTP_RELAY") ||
+      raise "SMTP_RELAY is required in production"
+
+  smtp_username =
+    System.get_env("SMTP_USERNAME") ||
+      raise "SMTP_USERNAME is required in production"
+
+  smtp_password =
+    System.get_env("SMTP_PASSWORD") ||
+      raise "SMTP_PASSWORD is required in production"
+
+  mailer_from =
+    System.get_env("MAILER_FROM") ||
+      raise "MAILER_FROM is required in production"
+
+  config :agentyard,
+    mailer_from: {System.get_env("MAILER_FROM_NAME", "AgentYard"), mailer_from}
+
+  config :agentyard, AgentYard.Mailer,
+    adapter: Swoosh.Adapters.SMTP,
+    relay: smtp_relay,
+    username: smtp_username,
+    password: smtp_password,
+    port: System.get_env("SMTP_PORT", "587"),
+    tls: System.get_env("SMTP_TLS", "always"),
+    auth: System.get_env("SMTP_AUTH", "always"),
+    ssl: System.get_env("SMTP_SSL", "false"),
+    retries: 2
 end
