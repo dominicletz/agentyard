@@ -33,7 +33,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: erlef/setup-beam@v1
         with:
-          otp-version: "27"
+          otp-version: "28"
           elixir-version: "1.18"
           version-type: "strict"
       - run: mix local.hex --force
