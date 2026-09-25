@@ -214,7 +214,7 @@ defmodule AgentYard.RunsLifecycleTest do
         restore_application_env(:sandbox_module, previous_module)
         restore_application_env(:provision_retry_delay_ms, previous_delay)
         Application.delete_env(:agentyard, :provision_retry_counter)
-        Agent.stop(counter)
+        if Process.alive?(counter), do: Agent.stop(counter)
       end)
 
       {:ok, run} =
