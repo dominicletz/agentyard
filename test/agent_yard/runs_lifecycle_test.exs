@@ -1,10 +1,10 @@
 defmodule AgentYard.RunsLifecycleTest do
   use ExUnit.Case, async: false
 
-  alias AgentYard.TestFactory
   alias AgentYard.Repo
   alias AgentYard.Runs
   alias AgentYard.Runs.{RunEvent, Session}
+  alias AgentYard.TestFactory
 
   setup do
     if Process.whereis(Repo) do
