@@ -201,7 +201,12 @@ defmodule AgentYard.RunsLifecycleTest do
       previous_delay = Application.get_env(:agentyard, :provision_retry_delay_ms)
       {:ok, counter} = Agent.start_link(fn -> 0 end)
 
-      Application.put_env(:agentyard, :sandbox_module, RetrySandbox)
+      Application.put_env(
+        :agentyard,
+        :sandbox_module,
+        AgentYard.RunsLifecycleTest.RetrySandbox
+      )
+
       Application.put_env(:agentyard, :provision_retry_counter, counter)
       Application.put_env(:agentyard, :provision_retry_delay_ms, 0)
 

@@ -21,7 +21,9 @@ defmodule AgentYard.Agents.ACPStubTest do
   end
 
   test "keeps follow-up explicit until an ACP transport exists" do
-    assert {:error, :acp_not_implemented} = ACPStub.follow_up(%{}, "continue")
+    assert {:error, :acp_not_implemented} =
+             ACPStub.follow_up(%{}, "continue", fn _event -> :ok end)
+
     assert :ignore = ACPStub.normalize(%{})
   end
 end

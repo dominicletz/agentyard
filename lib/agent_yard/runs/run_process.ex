@@ -65,11 +65,6 @@ defmodule AgentYard.Runs.RunProcess do
     provision(state)
   end
 
-  @impl true
-  def handle_info(:retry_provisioning, state) do
-    provision(%{state | provision_retry_ref: nil})
-  end
-
   defp provision(state) do
     owner = self()
     attempt = state.provision_attempt + 1
@@ -152,6 +147,10 @@ defmodule AgentYard.Runs.RunProcess do
   end
 
   def handle_info({:adapter_event, _event}, state), do: {:noreply, state}
+
+  def handle_info(:retry_provisioning, state) do
+    provision(%{state | provision_retry_ref: nil})
+  end
 
   def handle_info(:run_timeout, state) do
     message = "Run exceeded its #{state.run.timeout_seconds || 3600}s wall-clock timeout"
@@ -258,7 +257,7 @@ defmodule AgentYard.Runs.RunProcess do
     {:stop, {:run_failed, reason}, state}
   end
 
-  defp mark_failed(state, message, finish \\ false) do
+  defp mark_failed(state, message, finish) do
     attrs = if finish, do: %{finished_at: DateTime.utc_now()}, else: %{}
     {:ok, run} = Runs.update_status(state.run, "failed", Map.put(attrs, :error, message))
     Runs.broadcast(run, {:run_updated, run})
@@ -403,7 +402,7 @@ defmodule AgentYard.Runs.RunProcess do
 
   defp sandbox_for(run) do
     case Application.get_env(:agentyard, :sandbox_module) do
-      module when is_atom(module) -> module
+      module when is_atom(module) and not is_nil(module) -> module
       _ -> default_sandbox_for(run)
     end
   end
