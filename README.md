@@ -36,6 +36,31 @@ mix test
 The test suite does not require a running Postgres instance for unit tests.
 CI additionally creates and migrates a Postgres database.
 
+### Passwordless sign-in email
+
+The login page supports both the existing password flow and one-time magic
+links. Magic-link tokens are stored as SHA-256 hashes, expire after 30 minutes,
+and are consumed once. Development uses Swoosh's local in-memory mailbox;
+tests use the Swoosh test adapter.
+
+Production uses Swoosh SMTP. Set these environment variables:
+
+```text
+MAILER_FROM             # required sender address
+MAILER_FROM_NAME        # optional, defaults to AgentYard
+SMTP_RELAY              # required SMTP hostname
+SMTP_USERNAME           # required SMTP username
+SMTP_PASSWORD           # required SMTP password
+SMTP_PORT               # optional, defaults to 587
+SMTP_TLS                # optional, defaults to always
+SMTP_AUTH               # optional, defaults to always
+SMTP_SSL                # optional, defaults to false; use for implicit TLS
+```
+
+Set `PHX_HOST` to the public HTTPS hostname so links point to the deployed
+AgentYard instance. For implicit TLS on port 465, set `SMTP_SSL=true` and
+`SMTP_TLS=never`.
+
 ## What is implemented
 
 - Phoenix Endpoint, LiveView UI and responsive light theme for Runs, New run,
@@ -43,7 +68,8 @@ CI additionally creates and migrates a Postgres database.
 - Ecto/Postgres schemas for users, teams, memberships, repositories, profiles,
   secrets, sessions, runs and normalized event logs.
 - Password authentication, team membership roles (`owner`, `admin`, `member`),
-  session auth, personal bearer API tokens and team-scoped authorization.
+  session auth, passwordless magic-link login, personal bearer API tokens and
+  team-scoped authorization.
 - OTP `DynamicSupervisor` plus a per-run `GenServer`, PubSub timeline updates
   and an Oban worker boundary for queued runs.
 - Normalized agent adapter behaviour with fake/scripted, Claude Code,
@@ -130,6 +156,6 @@ Product and technical rationale: [`docs/CONCEPT.md`](docs/CONCEPT.md).
 The current MVP gap map is tracked in
 [`docs/IMPLEMENTATION-TODO.md`](docs/IMPLEMENTATION-TODO.md). Remaining
 boundaries are deliberate: forge App installation and live permission APIs,
-operator-provided Docker egress policy, ACP runtime transport, magic links,
-and audit exports.
+operator-provided Docker egress policy, ACP runtime transport, and audit
+exports.
 Static visual references: [`docs/prototype/`](docs/prototype/).

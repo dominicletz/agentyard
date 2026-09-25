@@ -55,7 +55,7 @@ hardening remains.
 | M34 | Enforce `Accounts.authorize` on mutating UI/API operations | Done |
 | M35 | Keep run visibility member-only or add a viewer role | Done |
 | M36 | Record a basic audit event for mutations | Done |
-| M37 | Keep magic-link authentication deferred with an explicit boundary | Partial |
+| M37 | Implement passwordless magic-link authentication alongside passwords | Done |
 | M38 | Preserve explicit queued/running/succeeded/failed/cancelled state transitions | Done |
 | M39 | Retry provisioning failures without replaying agent turns | Done |
 | M40 | Clean up sandbox resources after terminal states | Done |
@@ -96,6 +96,7 @@ dispatch, fail-closed fork/permission policy checks, and best-effort issue/PR
 comments; GitHub App installation UX and live forge permission lookups remain
 open. Docker allowlists require an explicit operator policy hook rather than
 silently using unrestricted bridge networking. Durable diffs, repository and
-usage APIs, pinned runner binaries, and MCP passthrough are now wired. The ACP
-adapter is a compilable, explicitly NotImplemented boundary; a real protocol
-transport, magic-link authentication, and audit exports remain follow-up work.
+usage APIs, pinned runner binaries, MCP passthrough, and passwordless magic-link
+authentication are now wired. The ACP adapter is a compilable, explicitly
+NotImplemented boundary; a real protocol transport and audit exports remain
+follow-up work.
