@@ -1,0 +1,90 @@
+name: Deploy production
+
+# The workflow_run trigger starts deployment only after the image workflow
+# succeeds for main. Manual dispatch can deploy either :main or a SHA tag.
+on:
+  workflow_run:
+    workflows: ["Build and push image"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "GHCR image tag to deploy (main or a commit SHA)"
+        required: false
+        default: main
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '/opt/agentyard' }}
+      IMAGE_TAG: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || inputs.image_tag || 'main' }}
+      GHCR_USERNAME: ${{ secrets.GHCR_USERNAME || github.repository_owner }}
+      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+    steps:
+      - name: Check out deployment files
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          persist-credentials: false
+
+      - name: Configure SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          set -eu
+          install -m 700 -d "$HOME/.ssh"
+          printf '%s\n' "$DEPLOY_SSH_KEY" > "$HOME/.ssh/deploy_key"
+          chmod 600 "$HOME/.ssh/deploy_key"
+          ssh-keyscan -p "$DEPLOY_PORT" -H "$DEPLOY_HOST" >> "$HOME/.ssh/known_hosts"
+
+      - name: Create deployment directory
+        run: >-
+          ssh -i "$HOME/.ssh/deploy_key"
+          -o IdentitiesOnly=yes
+          -p "$DEPLOY_PORT"
+          "$DEPLOY_USER@$DEPLOY_HOST"
+          "mkdir -p '$DEPLOY_PATH'"
+
+      - name: Copy production files
+        run: >-
+          scp -i "$HOME/.ssh/deploy_key"
+          -o IdentitiesOnly=yes
+          -P "$DEPLOY_PORT"
+          docker-compose.prod.yml Caddyfile .env.prod.example
+          "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/"
+
+      - name: Log in to GHCR on deploy host
+        if: env.GHCR_TOKEN != ''
+        run: |
+          set -eu
+          printf '%s' "$GHCR_TOKEN" | ssh \
+            -i "$HOME/.ssh/deploy_key" \
+            -o IdentitiesOnly=yes \
+            -p "$DEPLOY_PORT" \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            "docker login ghcr.io --username '$GHCR_USERNAME' --password-stdin"
+
+      - name: Pull and restart production stack
+        run: |
+          set -eu
+          ssh \
+            -i "$HOME/.ssh/deploy_key" \
+            -o IdentitiesOnly=yes \
+            -p "$DEPLOY_PORT" \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            "cd '$DEPLOY_PATH' && \
+             export AGENTYARD_IMAGE_TAG='$IMAGE_TAG' && \
+             docker compose -f docker-compose.prod.yml pull && \
+             docker compose -f docker-compose.prod.yml up -d --remove-orphans && \
+             docker image prune -f"

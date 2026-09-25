@@ -36,6 +36,55 @@ mix test
 The test suite does not require a running Postgres instance for unit tests.
 CI additionally creates and migrates a Postgres database.
 
+## Production deploy
+
+Production images are published to
+`ghcr.io/dominicletz/agentyard:<tag>`. The image workflow publishes both the
+commit SHA tag and `:main` on pushes to `main` (and can also be run manually).
+The production image runs database migrations before starting the Phoenix
+release.
+
+The deploy workflow runs after a successful image build for `main`, or can be
+started manually with either `main` or a commit SHA as the image tag. Configure
+these GitHub Actions secrets:
+
+- `DEPLOY_HOST` — SSH hostname or address.
+- `DEPLOY_USER` — SSH user with access to the deployment directory and Docker.
+- `DEPLOY_SSH_KEY` — private key for that user.
+- `DEPLOY_PORT` — optional SSH port, default `22`.
+- `DEPLOY_PATH` — optional remote directory, default `/opt/agentyard`.
+
+If the GHCR package is private, also configure `GHCR_USERNAME` and a
+`GHCR_TOKEN` with permission to read packages, or log in to GHCR on the server
+during bootstrap. The workflow never copies or replaces the server's `.env`;
+it copies the production Compose files and `.env.prod.example` on each deploy
+so those files stay in sync.
+
+The server needs Docker, the Docker Compose plugin, and an SSH user in the
+`docker` group. A first-time setup is:
+
+1. Create the deployment user and `/opt/agentyard` (or the configured path).
+2. Copy or clone `docker-compose.prod.yml`, `Caddyfile`, and
+   `.env.prod.example` into that directory.
+3. Copy `.env.prod.example` to `.env` and replace all `CHANGE_ME` values. For
+   example, generate `SECRET_KEY_BASE` with `openssl rand -hex 64` and
+   `AGENTYARD_SECRET_KEY` with `openssl rand -hex 32`.
+4. Pull and start the stack:
+
+   ```sh
+   docker compose -f docker-compose.prod.yml pull
+   docker compose -f docker-compose.prod.yml up -d
+   ```
+
+Set `COMPOSE_PROFILES=caddy` in `.env` (or add `--profile caddy`) and set
+`DOMAIN` when the server should run the optional Caddy service. With DNS
+pointing at the server and ports 80/443 open, Caddy obtains and renews the
+Let's Encrypt certificate and proxies to the app on port 4000.
+
+Set `DEMO_MODE=false` in production. The seeded demo account
+(`demo@agentyard.local` / `demo-password`) is for local development only and
+must not be enabled on a production deployment.
+
 ## What is implemented
 
 - Phoenix Endpoint, LiveView UI and responsive light theme for Runs, New run,
