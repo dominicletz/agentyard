@@ -32,8 +32,7 @@ defmodule AgentYard.Runs.GitOrchestrator do
          forge_token: forge_config[:token],
          git_prepared: true,
          branch: branch
-       }), events ++ [Event.status("Workspace ready on #{run.branch_name}")]
-      }
+       }), events ++ [Event.status("Workspace ready on #{run.branch_name}")]}
     end
   end
 
@@ -94,7 +93,8 @@ defmodule AgentYard.Runs.GitOrchestrator do
          workspace
        ) do
     with {:ok, _} <- Command.run(["init", "-b", forge_config.base_branch, workspace]),
-         {:ok, _} <- Command.run(["-C", workspace, "commit", "--allow-empty", "-m", "AgentYard workspace"]) do
+         {:ok, _} <-
+           Command.run(["-C", workspace, "commit", "--allow-empty", "-m", "AgentYard workspace"]) do
       {:ok, [Event.status("Fake adapter: using an isolated local workspace (clone skipped)")]}
     else
       {:error, reason} -> {:error, {:workspace_init_failed, reason}}
@@ -119,7 +119,8 @@ defmodule AgentYard.Runs.GitOrchestrator do
 
   defp configure_identity(workspace) do
     with {:ok, _} <- Command.run(["-C", workspace, "config", "user.name", "AgentYard"]),
-         {:ok, _} <- Command.run(["-C", workspace, "config", "user.email", "agent@agentyard.local"]) do
+         {:ok, _} <-
+           Command.run(["-C", workspace, "config", "user.email", "agent@agentyard.local"]) do
       {:ok, workspace}
     end
   end

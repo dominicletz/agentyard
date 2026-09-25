@@ -289,7 +289,9 @@ defmodule AgentYard.Runs do
 
   defp boolean_attr(attrs, key, default) do
     case Map.fetch(attrs, key) do
-      {:ok, value} -> parse_boolean(value)
+      {:ok, value} ->
+        parse_boolean(value)
+
       :error ->
         case Map.fetch(attrs, to_string(key)) do
           {:ok, value} -> parse_boolean(value)
@@ -303,8 +305,12 @@ defmodule AgentYard.Runs do
 
   defp integer_attr(attrs, key, default) do
     case attr(attrs, key) do
-      nil -> default
-      value when is_integer(value) -> value
+      nil ->
+        default
+
+      value when is_integer(value) ->
+        value
+
       value ->
         case Integer.parse(to_string(value)) do
           {integer, _} -> integer

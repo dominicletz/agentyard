@@ -67,7 +67,9 @@ defmodule AgentYard.Runs.RunProcess do
       state =
         state
         |> Map.put(:run_config, prepared)
-        |> persist_events([Event.status("Starting #{sandbox_name(sandbox)} sandbox") | setup_events])
+        |> persist_events([
+          Event.status("Starting #{sandbox_name(sandbox)} sandbox") | setup_events
+        ])
 
       case state.adapter.prepare(prepared) do
         {:ok, adapter_config} ->

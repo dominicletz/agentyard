@@ -19,6 +19,7 @@ defmodule AgentYard.Agents.CLI do
         provider: provider,
         worker: nil
       }
+
       {:ok, launch(state)}
     else
       {:error, {:missing_executable, executables}}

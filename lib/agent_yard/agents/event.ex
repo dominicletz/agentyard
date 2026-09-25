@@ -87,6 +87,7 @@ defmodule AgentYard.Agents.Event do
   defp mask_raw(raw), do: raw
 
   defp mask_term(value, []), do: value
+
   defp mask_term(value, secrets) when is_binary(value) do
     Enum.reduce(secrets, value, fn secret, value ->
       :binary.replace(value, secret, "[REDACTED]", [:global])

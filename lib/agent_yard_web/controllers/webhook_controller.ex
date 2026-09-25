@@ -10,7 +10,10 @@ defmodule AgentYardWeb.WebhookController do
   def github(conn, params) do
     body = conn.private[:agentyard_raw_body] || Jason.encode!(params)
     signature = List.first(get_req_header(conn, "x-hub-signature-256"))
-    secret = System.get_env("GITHUB_WEBHOOK_SECRET") || Application.get_env(:agentyard, :github_webhook_secret)
+
+    secret =
+      System.get_env("GITHUB_WEBHOOK_SECRET") ||
+        Application.get_env(:agentyard, :github_webhook_secret)
 
     if Signature.github?(body, signature, secret) do
       dispatch(conn, "github", get_req_header(conn, "x-github-event") |> List.first(), params)
@@ -21,7 +24,10 @@ defmodule AgentYardWeb.WebhookController do
 
   def gitlab(conn, params) do
     token = List.first(get_req_header(conn, "x-gitlab-token"))
-    secret = System.get_env("GITLAB_WEBHOOK_SECRET") || Application.get_env(:agentyard, :gitlab_webhook_secret)
+
+    secret =
+      System.get_env("GITLAB_WEBHOOK_SECRET") ||
+        Application.get_env(:agentyard, :gitlab_webhook_secret)
 
     if Signature.gitlab?(token, secret) do
       dispatch(conn, "gitlab", nil, params)
@@ -55,7 +61,8 @@ defmodule AgentYardWeb.WebhookController do
   end
 
   defp create_webhook_run(attrs) do
-    with repository when not is_nil(repository) <- Repositories.find_for_webhook(attrs.repository),
+    with repository when not is_nil(repository) <-
+           Repositories.find_for_webhook(attrs.repository),
          team when not is_nil(team) <- Accounts.get_team(repository.team_id),
          user when not is_nil(user) <- Accounts.first_member(team),
          profile when not is_nil(profile) <- AgentProfiles.default_for_team(team.id),
@@ -202,8 +209,8 @@ defmodule AgentYardWeb.WebhookController do
   defp reject_gitlab_fork(%{"object_attributes" => attributes} = params) do
     if attributes["source_project_id"] && attributes["target_project_id"] &&
          attributes["source_project_id"] != attributes["target_project_id"],
-      do: {:error, :fork_merge_request_rejected},
-      else: :ok
+       do: {:error, :fork_merge_request_rejected},
+       else: :ok
   end
 
   defp reject_gitlab_fork(_params), do: :ok
