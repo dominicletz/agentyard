@@ -47,6 +47,7 @@ defmodule AgentYardWeb.Router do
     post("/runs", RunController, :create)
     get("/runs/:id", RunController, :show)
     get("/runs/:id/usage", RunController, :usage)
+    get("/sessions/:id/usage", RunController, :session_usage)
     post("/runs/:id/followups", RunController, :follow_up)
     post("/runs/:id/cancel", RunController, :cancel)
     get("/runs/:id/events", RunController, :events)

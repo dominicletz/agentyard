@@ -43,6 +43,27 @@ defmodule AgentYardWeb.Api.RunController do
     })
   end
 
+  def session_usage(%{assigns: %{team: team}} = conn, %{"id" => id}) do
+    session = Runs.get_session!(id, team)
+    usage = Runs.session_usage(session)
+
+    json(conn, %{
+      data: %{
+        session_id: usage.session_id,
+        run_count: usage.run_count,
+        input_tokens: usage.input_tokens,
+        output_tokens: usage.output_tokens,
+        cache_tokens: usage.cache_tokens,
+        cost_usd: decimal(usage.cost_usd),
+        budget_usd: decimal(usage.budget_usd),
+        runs:
+          Enum.map(usage.runs, fn run ->
+            Map.update!(run, :cost_usd, &decimal/1)
+          end)
+      }
+    })
+  end
+
   def follow_up(%{assigns: %{current_user: user, team: team}} = conn, %{"id" => id} = params) do
     run = Runs.get_run!(id, team)
 
@@ -147,6 +168,7 @@ defmodule AgentYardWeb.Api.RunController do
       merge_request_url: run.merge_request_url,
       error: run.error,
       session_id: run.session_id,
+      repository_id: run.session.repository_id,
       inserted_at: run.inserted_at
     }
   end

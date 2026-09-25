@@ -15,7 +15,9 @@ defmodule AgentYardWeb.Api.RepositoryController do
           remote_url: repository.remote_url,
           default_branch: repository.default_branch,
           description: repository.description,
-          environment_image: repository.environment_image
+          environment_image: repository.environment_image,
+          inserted_at: repository.inserted_at,
+          updated_at: repository.updated_at
         }
       end)
 

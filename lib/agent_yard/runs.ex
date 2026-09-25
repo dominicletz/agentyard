@@ -40,6 +40,13 @@ defmodule AgentYard.Runs do
     |> Repo.get(id)
   end
 
+  def get_session!(id, %Team{id: team_id}) do
+    Session
+    |> where([s], s.id == ^id and s.team_id == ^team_id)
+    |> preload([:repository, :agent_profile])
+    |> Repo.one!()
+  end
+
   def active_runs do
     from(r in Run,
       where: r.status in ["queued", "running"],
@@ -265,6 +272,40 @@ defmodule AgentYard.Runs do
     end
   end
 
+  @doc """
+  Aggregates usage for all runs in a team-owned session.
+
+  The run rows are also returned so API consumers can reconcile the aggregate
+  without querying every run separately.
+  """
+  def session_usage(%Session{} = session) do
+    runs =
+      from(r in Run,
+        where: r.session_id == ^session.id and r.team_id == ^session.team_id,
+        order_by: [asc: r.inserted_at],
+        select: %{
+          id: r.id,
+          status: r.status,
+          input_tokens: r.input_tokens,
+          output_tokens: r.output_tokens,
+          cache_tokens: r.cache_tokens,
+          cost_usd: r.cost_usd
+        }
+      )
+      |> Repo.all()
+
+    %{
+      session_id: session.id,
+      run_count: length(runs),
+      input_tokens: Enum.sum(Enum.map(runs, &(&1.input_tokens || 0))),
+      output_tokens: Enum.sum(Enum.map(runs, &(&1.output_tokens || 0))),
+      cache_tokens: Enum.sum(Enum.map(runs, &(&1.cache_tokens || 0))),
+      cost_usd: Enum.reduce(runs, Decimal.new("0"), &add_cost/2),
+      budget_usd: session.agent_profile && session.agent_profile.budget_usd,
+      runs: Enum.map(runs, &session_run_usage/1)
+    }
+  end
+
   def update_status(%Run{} = run, status, attrs \\ %{}) do
     case update_run(run, Map.merge(attrs, %{status: status})) do
       {:ok, updated} = result ->
@@ -400,6 +441,23 @@ defmodule AgentYard.Runs do
       Map.get(usage, :total_cost_usd) ||
       Map.get(usage, "cost") ||
       Map.get(usage, :cost)
+  end
+
+  defp add_cost(%{cost_usd: nil}, total), do: total
+
+  defp add_cost(%{cost_usd: cost}, total) do
+    Decimal.add(total, Decimal.new(to_string(cost)))
+  end
+
+  defp session_run_usage(run) do
+    %{
+      id: run.id,
+      status: run.status,
+      input_tokens: run.input_tokens || 0,
+      output_tokens: run.output_tokens || 0,
+      cache_tokens: run.cache_tokens || 0,
+      cost_usd: run.cost_usd || Decimal.new("0")
+    }
   end
 
   defp unwrap_transaction({:ok, value}), do: value

@@ -14,12 +14,26 @@ paths:
       responses:
         "200":
           description: Repository list
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Repository"
   /api/runs:
     get:
       summary: List team runs
       responses:
         "200":
           description: Run list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunListResponse"
     post:
       summary: Create and start a run
       requestBody:
@@ -31,6 +45,10 @@ paths:
       responses:
         "202":
           description: Run accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunResponse"
   /api/runs/{id}:
     get:
       summary: Get a run
@@ -39,6 +57,10 @@ paths:
       responses:
         "200":
           description: Run
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunResponse"
   /api/runs/{id}/usage:
     get:
       summary: Get token and USD usage for a run
@@ -47,6 +69,22 @@ paths:
       responses:
         "200":
           description: Run usage
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunUsageResponse"
+  /api/sessions/{id}/usage:
+    get:
+      summary: Get aggregate token and USD usage for a session
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+      responses:
+        "200":
+          description: Session usage
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionUsageResponse"
   /api/runs/{id}/followups:
     post:
       summary: Start a follow-up run in the same session
@@ -55,6 +93,10 @@ paths:
       responses:
         "202":
           description: Follow-up accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunResponse"
   /api/runs/{id}/cancel:
     post:
       summary: Cancel a run
@@ -63,6 +105,10 @@ paths:
       responses:
         "200":
           description: Cancelled run
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunResponse"
   /api/runs/{id}/events:
     get:
       summary: List persisted events
@@ -71,6 +117,16 @@ paths:
       responses:
         "200":
           description: Event list
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/RunEvent"
   /api/runs/{id}/events/stream:
     get:
       summary: Stream run events over SSE
@@ -92,7 +148,130 @@ components:
       schema:
         type: string
         format: uuid
+    SessionId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
   schemas:
+    Repository:
+      type: object
+      required: [id, name, forge, remote_url, default_branch]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        forge: {type: string, enum: [github, gitlab]}
+        remote_url: {type: string, format: uri}
+        default_branch: {type: string}
+        description: {type: string, nullable: true}
+        environment_image: {type: string, nullable: true}
+        inserted_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    Run:
+      type: object
+      required: [id, prompt, status, trigger, repository_id, session_id]
+      properties:
+        id: {type: string, format: uuid}
+        prompt: {type: string}
+        status: {type: string, enum: [queued, running, succeeded, failed, cancelled]}
+        trigger: {type: string}
+        base_branch: {type: string}
+        branch_name: {type: string, nullable: true}
+        adapter: {type: string, nullable: true}
+        auto_pr: {type: boolean}
+        environment: {type: string, enum: [local, docker]}
+        issue_url: {type: string, format: uri, nullable: true}
+        timeout_seconds: {type: integer, nullable: true}
+        max_turns: {type: integer, nullable: true}
+        usage:
+          $ref: "#/components/schemas/Usage"
+        pr_url: {type: string, format: uri, nullable: true}
+        merge_request_url: {type: string, format: uri, nullable: true}
+        error: {type: string, nullable: true}
+        session_id: {type: string, format: uuid}
+        inserted_at: {type: string, format: date-time}
+    Usage:
+      type: object
+      required: [input_tokens, output_tokens, cache_tokens, cost_usd]
+      properties:
+        input_tokens: {type: integer}
+        output_tokens: {type: integer}
+        cache_tokens: {type: integer}
+        cost_usd: {type: string}
+    RunListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Run"
+    RunResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/Run"
+    RunUsage:
+      type: object
+      required: [run_id, session_id, input_tokens, output_tokens, cache_tokens, cost_usd]
+      properties:
+        run_id: {type: string, format: uuid}
+        session_id: {type: string, format: uuid}
+        input_tokens: {type: integer}
+        output_tokens: {type: integer}
+        cache_tokens: {type: integer}
+        cost_usd: {type: string}
+        budget_usd: {type: string}
+    RunUsageResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/RunUsage"
+    SessionUsageRun:
+      type: object
+      required: [id, status, input_tokens, output_tokens, cache_tokens, cost_usd]
+      properties:
+        id: {type: string, format: uuid}
+        status: {type: string}
+        input_tokens: {type: integer}
+        output_tokens: {type: integer}
+        cache_tokens: {type: integer}
+        cost_usd: {type: string}
+    SessionUsage:
+      type: object
+      required:
+        [session_id, run_count, input_tokens, output_tokens, cache_tokens, cost_usd, runs]
+      properties:
+        session_id: {type: string, format: uuid}
+        run_count: {type: integer}
+        input_tokens: {type: integer}
+        output_tokens: {type: integer}
+        cache_tokens: {type: integer}
+        cost_usd: {type: string}
+        budget_usd: {type: string, nullable: true}
+        runs:
+          type: array
+          items:
+            $ref: "#/components/schemas/SessionUsageRun"
+    SessionUsageResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/SessionUsage"
+    RunEvent:
+      type: object
+      required: [id, sequence, kind, payload, inserted_at]
+      properties:
+        id: {type: string, format: uuid}
+        sequence: {type: integer}
+        kind: {type: string}
+        payload: {type: object}
+        inserted_at: {type: string, format: date-time}
     CreateRun:
       type: object
       required: [repository_id, agent_profile_id, prompt]

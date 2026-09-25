@@ -63,6 +63,64 @@ defmodule AgentYardWeb.Api.RunControllerTest do
     end
   end
 
+  test "exposes repository metadata and run/session usage aggregates", context do
+    if context[:database] == false do
+      assert true
+    else
+      repositories =
+        context.conn
+        |> authenticated(context.api_token)
+        |> get("/api/repositories")
+        |> json_response(200)
+
+      assert [%{"id" => id, "name" => "example/repository", "default_branch" => "main"}] =
+               repositories["data"]
+
+      assert id == context.repository.id
+
+      params = %{
+        repository_id: context.repository.id,
+        agent_profile_id: context.profile.id,
+        prompt: "Read usage after completion"
+      }
+
+      conn =
+        context.conn
+        |> authenticated(context.api_token)
+        |> post("/api/runs", Jason.encode!(params))
+
+      run_id = json_response(conn, 202)["data"]["id"]
+
+      assert TestFactory.eventually(fn ->
+               Repo.get!(AgentYard.Runs.Run, run_id).status == "succeeded"
+             end)
+
+      run = Repo.get!(AgentYard.Runs.Run, run_id)
+
+      run_usage =
+        context.conn
+        |> authenticated(context.api_token)
+        |> get("/api/runs/#{run_id}/usage")
+        |> json_response(200)
+
+      assert run_usage["data"]["run_id"] == run_id
+      assert run_usage["data"]["input_tokens"] == 420
+      assert run_usage["data"]["output_tokens"] == 180
+      assert run_usage["data"]["cost_usd"] == "0"
+
+      session_usage =
+        context.conn
+        |> authenticated(context.api_token)
+        |> get("/api/sessions/#{run.session_id}/usage")
+        |> json_response(200)
+
+      assert session_usage["data"]["session_id"] == run.session_id
+      assert session_usage["data"]["run_count"] == 1
+      assert session_usage["data"]["input_tokens"] == 420
+      assert [%{"id" => ^run_id, "status" => "succeeded"}] = session_usage["data"]["runs"]
+    end
+  end
+
   defp authenticated(conn, token) do
     conn
     |> put_req_header("authorization", "Bearer #{token}")
