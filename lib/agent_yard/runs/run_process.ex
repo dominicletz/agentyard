@@ -14,7 +14,6 @@ defmodule AgentYard.Runs.RunProcess do
     )
   end
 
-  @impl true
   def child_spec(run_id) do
     %{
       id: {__MODULE__, run_id},
