@@ -15,6 +15,16 @@ defmodule AgentYard.Runs.RunProcess do
   end
 
   @impl true
+  def child_spec(run_id) do
+    %{
+      id: {__MODULE__, run_id},
+      start: {__MODULE__, :start_link, [run_id]},
+      restart: :temporary,
+      type: :worker
+    }
+  end
+
+  @impl true
   def init(run_id) do
     case Runs.get_run(run_id) do
       nil ->
