@@ -69,14 +69,17 @@ the operator. GitHub/GitLab clone, branch, commit/push and PR/MR orchestration
 is wired; runs without forge tokens emit a clear skip event instead of
 attempting a write.
 
-Docker runs default to a deny-all network and expose an allowlist hook, but
-domain-level egress enforcement, image builds from repository configuration,
-and persistent follow-up volumes still need hardening. Webhook signature,
-mention/label dispatch, and best-effort progress/result comments are wired;
-GitHub App installation UX, complete forge permission lookups, diff
-persistence, MCP configuration and audit exports remain roadmap work. SSO,
-invitation email, CI feedback loops and remote/Kubernetes runners remain out
-of this milestone.
+Docker runs default to a deny-all network. An allowlist must be resolved by an
+explicit operator policy hook that returns an egress-controlled Docker network;
+AgentYard never falls back to unrestricted bridge networking. Image builds
+from repository configuration and persistent follow-up volumes still need
+hardening. Webhook signature, fail-closed fork/mention policy, label dispatch,
+and best-effort progress/result comments are wired; GitHub App installation UX
+and live forge permission lookups remain outside this milestone. Persisted
+workspace diffs, repository/session usage APIs, profile MCP configuration, and
+pinned Claude/Cursor runner binaries are included. SSO, invitation email, CI
+feedback loops, audit exports and remote/Kubernetes runners remain out of this
+milestone.
 
 ## Architecture
 
@@ -121,4 +124,12 @@ and GitLab self-managed validation. Slack/Jira triggers, OIDC/SAML, remote
 runner pools, Helm and richer review workflows follow in v1.
 
 Product and technical rationale: [`docs/CONCEPT.md`](docs/CONCEPT.md).
+
+## Implementation status
+
+The current MVP gap map is tracked in
+[`docs/IMPLEMENTATION-TODO.md`](docs/IMPLEMENTATION-TODO.md). Remaining
+boundaries are deliberate: forge App installation and live permission APIs,
+operator-provided Docker egress policy, ACP, magic links, retry/cleanup
+hardening, and audit exports.
 Static visual references: [`docs/prototype/`](docs/prototype/).

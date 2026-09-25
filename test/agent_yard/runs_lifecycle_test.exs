@@ -174,7 +174,7 @@ defmodule AgentYard.RunsLifecycleTest do
                Repo.get!(AgentYard.Runs.Run, run.id).status == "succeeded"
              end)
 
-      assert Repo.get!(AgentYard.Runs.Run, run.id).cost_usd == Decimal.new("0.04")
+      assert Decimal.equal?(Repo.get!(AgentYard.Runs.Run, run.id).cost_usd, Decimal.new("0.04"))
     end
   end
 end
