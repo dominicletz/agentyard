@@ -40,17 +40,20 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Make GHCR package public
+      - name: Make GHCR package public (best effort)
+        continue-on-error: true
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -eu
-          # This idempotent PATCH returns success when the package is already public.
-          curl --fail-with-body --silent --show-error \
-            --request PATCH \
-            --header "Accept: application/vnd.github+json" \
-            --header "Authorization: Bearer ${GH_TOKEN}" \
-            --header "X-GitHub-Api-Version: 2022-11-28" \
-            --header "Content-Type: application/json" \
-            --data '{"visibility":"public"}' \
-            "${{ github.api_url }}/user/packages/container/agentyard"
+          # packages: write permits publishing, but not changing package visibility.
+          if ! curl --fail-with-body --silent --show-error \
+              --request PATCH \
+              --header "Accept: application/vnd.github+json" \
+              --header "Authorization: Bearer ${GITHUB_TOKEN}" \
+              --header "X-GitHub-Api-Version: 2022-11-28" \
+              --header "Content-Type: application/json" \
+              --data '{"visibility":"public"}' \
+              "${{ github.api_url }}/user/packages/container/agentyard"; then
+            echo "::warning::GitHub could not change GHCR package visibility with GITHUB_TOKEN (the API currently returns 404). Set agentyard to Public once in Package settings; see the production deploy instructions in README.md."
+          fi

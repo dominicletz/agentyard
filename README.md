@@ -54,11 +54,22 @@ these GitHub Actions secrets:
 - `DEPLOY_PORT` — optional SSH port, default `22`.
 - `DEPLOY_PATH` — optional remote directory, default `/opt/agentyard`.
 
-If the GHCR package is private, also configure `GHCR_USERNAME` and a
-`GHCR_TOKEN` with permission to read packages, or log in to GHCR on the server
-during bootstrap. The workflow never copies or replaces the server's `.env`;
-it copies the production Compose files and `.env.prod.example` on each deploy
-so those files stay in sync.
+The image workflow can publish with its `GITHUB_TOKEN` and `packages: write`
+permission, but GitHub does not allow that token to change package visibility.
+The workflow reports this as a warning so a successful image push stays green.
+Before the first production deploy, make the package public once in GitHub:
+
+1. Open the
+   [`agentyard` package settings](https://github.com/users/dominicletz/packages/container/agentyard/settings).
+2. Under **Danger Zone**, choose **Change visibility**, select **Public**, and
+   confirm the package name.
+
+Public GHCR container packages support anonymous pulls, so the normal deploy
+does not need `GHCR_USERNAME` or `GHCR_TOKEN`. If the package must remain
+private, configure those optional secrets with a token that can read packages,
+or log in to GHCR on the server during bootstrap. The workflow never copies or
+replaces the server's `.env`; it copies the production Compose files and
+`.env.prod.example` on each deploy so those files stay in sync.
 
 The server needs Docker, the Docker Compose plugin, and an SSH user in the
 `docker` group. A first-time setup is:
