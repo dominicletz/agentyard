@@ -54,25 +54,7 @@ defmodule AgentYard.Accounts do
     token_hash = hash_token(raw_token)
     now = DateTime.utc_now()
 
-    Repo.transaction(fn ->
-      token =
-        from(t in MagicLinkToken,
-          where:
-            t.token_hash == ^token_hash and is_nil(t.consumed_at) and
-              t.expires_at > ^now,
-          lock: "FOR UPDATE"
-        )
-        |> Repo.one()
-
-      if token do
-        case Repo.update(Ecto.Changeset.change(token, consumed_at: now)) do
-          {:ok, _token} -> get_user!(token.user_id)
-          {:error, _changeset} -> Repo.rollback(:invalid_magic_link)
-        end
-      else
-        Repo.rollback(:invalid_magic_link)
-      end
-    end)
+    Repo.transaction(fn -> consume_magic_link_transaction(token_hash, now) end)
   end
 
   def consume_magic_link(_raw_token), do: {:error, :invalid_magic_link}
@@ -196,6 +178,27 @@ defmodule AgentYard.Accounts do
 
   def demo_user do
     get_user_by_email("demo@agentyard.local")
+  end
+
+  defp consume_magic_link_transaction(token_hash, now) do
+    token = find_magic_link_token(token_hash, now)
+
+    with %MagicLinkToken{} = token <- token,
+         {:ok, _token} <- Repo.update(Ecto.Changeset.change(token, consumed_at: now)) do
+      get_user!(token.user_id)
+    else
+      _ -> Repo.rollback(:invalid_magic_link)
+    end
+  end
+
+  defp find_magic_link_token(token_hash, now) do
+    from(t in MagicLinkToken,
+      where:
+        t.token_hash == ^token_hash and is_nil(t.consumed_at) and
+          t.expires_at > ^now,
+      lock: "FOR UPDATE"
+    )
+    |> Repo.one()
   end
 
   defp maybe_send_magic_link(user, link_builder) do

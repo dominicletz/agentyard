@@ -1,4 +1,8 @@
 defmodule AgentYard.Accounts.MagicLinkEmail do
+  @moduledoc """
+  Swoosh email for passwordless AgentYard sign-in.
+  """
+
   import Swoosh.Email
 
   alias AgentYard.Accounts.User
