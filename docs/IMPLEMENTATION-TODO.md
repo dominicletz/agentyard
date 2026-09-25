@@ -34,12 +34,12 @@ hardening remains.
 
 | ID | MVP item | Status |
 |---|---|---|
-| M21 | Verify GitHub webhook signatures | Partial |
-| M22 | Verify GitLab webhook tokens/signatures | Partial |
-| M23 | Trigger runs from GitHub @mentions | Partial |
-| M24 | Trigger runs from GitHub labels | Partial |
-| M25 | Trigger runs from GitLab @mentions | Partial |
-| M26 | Trigger runs from GitLab labels | Partial |
+| M21 | Verify GitHub webhook signatures | Done |
+| M22 | Verify GitLab webhook tokens/signatures | Done |
+| M23 | Trigger runs from GitHub @mentions | Done |
+| M24 | Trigger runs from GitHub labels | Done |
+| M25 | Trigger runs from GitLab @mentions | Done |
+| M26 | Trigger runs from GitLab labels | Done |
 | M27 | Post progress comments to the source issue or PR | Done |
 | M28 | Post result comments with the PR/MR link | Done |
 | M29 | Reject fork pull requests without a trusted workspace | Done |

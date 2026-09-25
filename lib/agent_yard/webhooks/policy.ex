@@ -65,29 +65,35 @@ defmodule AgentYard.Webhooks.Policy do
         :ok
 
       pull_request ->
-        source_repo = pull_request["head"] && pull_request["head"]["repo"]
-        trusted_workspace? = payload["trusted_workspace"] == true
-
-        cond do
-          trusted_workspace? ->
-            :ok
-
-          is_map(source_repo) and truthy?(source_repo["fork"]) ->
-            {:error, :fork_pull_request_rejected}
-
-          is_map(source_repo) and different_repository?(payload["repository"], source_repo) ->
-            {:error, :fork_pull_request_rejected}
-
-          is_map(source_repo) ->
-            :ok
-
-          true ->
-            {:error, :untrusted_pull_request_workspace}
-        end
+        reject_github_pull_request(payload, pull_request)
     end
   end
 
   def reject_github_fork(_payload), do: :ok
+
+  defp reject_github_pull_request(payload, pull_request) do
+    source_repo = get_in(pull_request, ["head", "repo"])
+
+    cond do
+      payload["trusted_workspace"] == true ->
+        :ok
+
+      fork_repository?(payload, source_repo) ->
+        {:error, :fork_pull_request_rejected}
+
+      is_map(source_repo) ->
+        :ok
+
+      true ->
+        {:error, :untrusted_pull_request_workspace}
+    end
+  end
+
+  defp fork_repository?(payload, source_repo) when is_map(source_repo) do
+    truthy?(source_repo["fork"]) or different_repository?(payload["repository"], source_repo)
+  end
+
+  defp fork_repository?(_payload, _source_repo), do: false
 
   @doc """
   Rejects GitLab merge requests whose source project differs from the target.

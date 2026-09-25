@@ -68,10 +68,8 @@ defmodule AgentYard.Runs.GitOrchestrator do
   `RunProcess`, so cleanup cannot erase the inspection artifact.
   """
   def workspace_diff(%{workspace: workspace}) when is_binary(workspace) do
-    with {:ok, _} <- Command.run(["-C", workspace, "add", "-N", "--", "."]),
-         {:ok, diff} <-
-           Command.run(["-C", workspace, "diff", "--no-ext-diff", "--binary", "HEAD", "--", "."]) do
-      {:ok, diff}
+    with {:ok, _} <- Command.run(["-C", workspace, "add", "-N", "--", "."]) do
+      Command.run(["-C", workspace, "diff", "--no-ext-diff", "--binary", "HEAD", "--", "."])
     end
   end
 

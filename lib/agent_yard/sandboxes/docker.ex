@@ -5,10 +5,12 @@ defmodule AgentYard.Sandboxes.Docker do
 
   @behaviour AgentYard.Sandboxes.Runner
 
+  alias AgentYard.Sandboxes.NetworkPolicy
+
   @impl true
   def prepare(config) do
     with true <- not is_nil(System.find_executable("docker")),
-         {:ok, network_policy_args} <- AgentYard.Sandboxes.NetworkPolicy.prepare(config) do
+         {:ok, network_policy_args} <- NetworkPolicy.prepare(config) do
       {:ok,
        config
        |> Map.put(:sandbox, :docker)
@@ -20,7 +22,7 @@ defmodule AgentYard.Sandboxes.Docker do
   end
 
   @impl true
-  def cleanup(config), do: AgentYard.Sandboxes.NetworkPolicy.cleanup(config)
+  def cleanup(config), do: NetworkPolicy.cleanup(config)
 
   @impl true
   def command(config, args) do
@@ -97,5 +99,5 @@ defmodule AgentYard.Sandboxes.Docker do
   defp network_policy_args(%{network_policy_args: args}) when is_list(args), do: {:ok, args}
 
   defp network_policy_args(config),
-    do: AgentYard.Sandboxes.NetworkPolicy.prepare(config)
+    do: NetworkPolicy.prepare(config)
 end
