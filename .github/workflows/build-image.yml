@@ -45,11 +45,12 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -eu
-          # This idempotent PUT returns success when the package is already public.
+          # This idempotent PATCH returns success when the package is already public.
           curl --fail-with-body --silent --show-error \
-            --request PUT \
+            --request PATCH \
             --header "Accept: application/vnd.github+json" \
             --header "Authorization: Bearer ${GH_TOKEN}" \
             --header "X-GitHub-Api-Version: 2022-11-28" \
+            --header "Content-Type: application/json" \
             --data '{"visibility":"public"}' \
-            "${{ github.api_url }}/user/packages/container/agentyard/visibility"
+            "${{ github.api_url }}/user/packages/container/agentyard"
