@@ -13,7 +13,8 @@ defmodule AgentYard.Git.Command do
   def clone(remote_url, ref, workspace, env \\ []) do
     with :ok <- File.mkdir_p(Path.dirname(workspace)),
          {:ok, _} <-
-           run(["clone", "--branch", ref, "--single-branch", remote_url, workspace], env: env) do
+           run(["clone", remote_url, workspace], env: env),
+         {:ok, _} <- run(["-C", workspace, "checkout", ref], env: env) do
       {:ok, workspace}
     end
   end

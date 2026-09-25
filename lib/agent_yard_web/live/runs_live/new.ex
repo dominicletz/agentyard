@@ -67,7 +67,10 @@ defmodule AgentYardWeb.RunsLive.New do
           <div class="form-grid two">
             <label>Issue or PR link <span class="muted">(optional)</span><input name="issue_url" placeholder="https://github.com/…" /></label>
             <label>Environment
-              <select name="environment"><option>Repository default</option><option>Docker sandbox</option><option>Local development</option></select>
+              <select name="environment">
+                <option value="local">Local development</option>
+                <option value="docker">Docker sandbox</option>
+              </select>
             </label>
           </div>
           <div class="check-row">

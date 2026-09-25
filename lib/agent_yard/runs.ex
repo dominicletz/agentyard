@@ -51,6 +51,7 @@ defmodule AgentYard.Runs do
     profile = Repo.get_by!(Profile, id: attr(attrs, :agent_profile_id), team_id: team_id)
     branch = attr(attrs, :branch_name) || generated_branch()
     prompt = attr(attrs, :prompt)
+    environment = execution_environment(attr(attrs, :environment), profile.provider)
 
     Repo.transaction(fn ->
       {:ok, session} =
@@ -74,6 +75,10 @@ defmodule AgentYard.Runs do
         base_branch: attr(attrs, :base_branch) || repository.default_branch,
         branch_name: branch,
         adapter: profile.provider,
+        auto_pr: boolean_attr(attrs, :auto_pr, true),
+        environment: environment,
+        issue_url: attr(attrs, :issue_url),
+        timeout_seconds: integer_attr(attrs, :timeout_seconds, 3600),
         status: "queued"
       })
       |> Repo.insert()
@@ -95,27 +100,69 @@ defmodule AgentYard.Runs do
         base_branch: run.base_branch,
         branch_name: run.branch_name,
         adapter: run.adapter,
+        auto_pr: run.auto_pr,
+        environment: run.environment,
+        issue_url: run.issue_url,
+        timeout_seconds: run.timeout_seconds,
         status: "queued"
       })
       |> Repo.insert()
     end
   end
 
-  def enqueue_run(%Run{id: run_id}) do
-    run_id
+  def enqueue_run(%Run{id: run_id, team_id: team_id, session_id: session_id}) do
+    %{"run_id" => run_id, "team_id" => team_id, "session_id" => session_id}
     |> Worker.new()
     |> Oban.insert()
   end
 
-  def start_run(%Run{id: run_id}), do: start_live_run(run_id)
+  @doc """
+  Queue a run for asynchronous execution.
+
+  The old direct-start entry point is intentionally retained as the public API,
+  but it now inserts an Oban job so LiveViews and REST callers never block on
+  clone, sandbox or provider startup.
+  """
+  def start_run(%Run{} = run), do: enqueue_run(run)
 
   def start_live_run(run_id) do
-    child = {RunProcess, run_id}
+    case get_run(run_id) do
+      %Run{status: "queued"} = run ->
+        if concurrency_available?(run) do
+          child = {RunProcess, run_id}
 
-    case DynamicSupervisor.start_child(AgentYard.Runs.Supervisor, child) do
-      {:error, {:already_started, pid}} -> {:ok, pid}
-      result -> result
+          case DynamicSupervisor.start_child(AgentYard.Runs.Supervisor, child) do
+            {:error, {:already_started, pid}} -> {:ok, pid}
+            result -> result
+          end
+        else
+          {:error, :concurrency_limit}
+        end
+
+      %Run{status: status} when status in ["running", "succeeded", "failed", "cancelled"] ->
+        {:error, {:invalid_run_status, status}}
+
+      nil ->
+        {:error, :run_not_found}
     end
+  end
+
+  def team_concurrency_limit,
+    do: Application.get_env(:agentyard, :run_concurrency_limit, 2)
+
+  def concurrency_available?(%Run{team_id: team_id, session_id: session_id}) do
+    running_count =
+      from(r in Run, where: r.team_id == ^team_id and r.status == "running", select: count(r.id))
+      |> Repo.one()
+
+    session_running? =
+      from(r in Run,
+        where: r.session_id == ^session_id and r.status == "running",
+        select: count(r.id)
+      )
+      |> Repo.one()
+
+    running_count < team_concurrency_limit() and session_running? == 0
   end
 
   def cancel(%Run{} = run, %User{} = user) do
@@ -172,11 +219,16 @@ defmodule AgentYard.Runs do
   def apply_event(%Run{} = run, _event), do: {:ok, run}
 
   def update_usage(%Run{} = run, usage) do
-    update_run(run, %{
+    attrs = %{
       input_tokens: usage_value(usage, "input_tokens", :input_tokens, run.input_tokens),
       output_tokens: usage_value(usage, "output_tokens", :output_tokens, run.output_tokens),
       cache_tokens: usage_value(usage, "cache_tokens", :cache_tokens, run.cache_tokens)
-    })
+    }
+
+    case usage_cost(usage) do
+      nil -> update_run(run, attrs)
+      cost -> update_run(run, Map.put(attrs, :cost_usd, cost))
+    end
   end
 
   def update_status(%Run{} = run, status, attrs \\ %{}) do
@@ -235,6 +287,44 @@ defmodule AgentYard.Runs do
 
   defp attr(attrs, key), do: Map.get(attrs, key) || Map.get(attrs, to_string(key))
 
+  defp boolean_attr(attrs, key, default) do
+    case Map.fetch(attrs, key) do
+      {:ok, value} -> parse_boolean(value)
+      :error ->
+        case Map.fetch(attrs, to_string(key)) do
+          {:ok, value} -> parse_boolean(value)
+          :error -> default
+        end
+    end
+  end
+
+  defp parse_boolean(value) when value in [true, "true", "1", 1], do: true
+  defp parse_boolean(_value), do: false
+
+  defp integer_attr(attrs, key, default) do
+    case attr(attrs, key) do
+      nil -> default
+      value when is_integer(value) -> value
+      value ->
+        case Integer.parse(to_string(value)) do
+          {integer, _} -> integer
+          :error -> default
+        end
+    end
+  end
+
+  defp execution_environment(value, _provider) when value in ["docker", :docker],
+    do: "docker"
+
+  defp execution_environment(value, _provider) when value in ["local", :local],
+    do: "local"
+
+  defp execution_environment(value, _provider)
+       when value in ["Repository default", "repository_default", nil, ""],
+       do: "local"
+
+  defp execution_environment(_value, _provider), do: "local"
+
   defp generated_branch do
     "agent/#{Date.utc_today()}/" <> (Ecto.UUID.generate() |> String.slice(0, 8))
   end
@@ -249,6 +339,15 @@ defmodule AgentYard.Runs do
 
   defp usage_value(usage, string_key, atom_key, current),
     do: Map.get(usage, string_key) || Map.get(usage, atom_key) || current || 0
+
+  defp usage_cost(usage) do
+    Map.get(usage, "cost_usd") ||
+      Map.get(usage, :cost_usd) ||
+      Map.get(usage, "total_cost_usd") ||
+      Map.get(usage, :total_cost_usd) ||
+      Map.get(usage, "cost") ||
+      Map.get(usage, :cost)
+  end
 
   defp unwrap_transaction({:ok, value}), do: value
   defp unwrap_transaction({:error, reason}), do: {:error, reason}

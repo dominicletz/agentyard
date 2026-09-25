@@ -43,6 +43,7 @@ defmodule AgentYardWeb.ProfilesLive.Index do
           <label>Name<input name="name" value="Fake demo agent" required /></label>
           <label>Provider<select name="provider"><option value="fake">Fake / scripted</option><option value="claude_code">Claude Code</option><option value="cursor_cli">Cursor CLI</option><option value="openrouter">OpenRouter</option></select></label>
           <label>Model<input name="model" placeholder="claude-sonnet-4-5" /></label>
+          <label>OpenAI-compatible base URL <span class="muted">(optional)</span><input name="base_url" placeholder="https://openrouter.ai/api/v1" /></label>
           <label>Permission mode<select name="permission_mode"><option value="accept_edits">Accept edits</option><option value="ask">Ask</option><option value="plan">Plan</option><option value="bypass">Bypass</option></select></label>
           <label>Instructions<textarea name="instructions" rows="4" placeholder="Repository-specific guidance…"></textarea></label>
           <label>Budget (USD)<input name="budget_usd" value="5.00" type="number" step="0.01" min="0.01" /></label>

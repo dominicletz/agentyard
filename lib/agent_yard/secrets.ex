@@ -39,5 +39,9 @@ defmodule AgentYard.Secrets do
     )
     |> Repo.all()
     |> Map.new(fn secret -> {secret.name, SecretBox.decrypt(secret.encrypted_value)} end)
+    |> Enum.reduce(%{}, fn
+      {name, value}, values when is_binary(value) -> Map.put(values, name, value)
+      {_name, _invalid}, values -> values
+    end)
   end
 end

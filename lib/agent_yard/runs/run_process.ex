@@ -5,8 +5,11 @@ defmodule AgentYard.Runs.RunProcess do
 
   use GenServer
 
-  alias AgentYard.Agents.Event
+  alias AgentYard.Agents.{Event, Fake}
   alias AgentYard.Runs
+  alias AgentYard.Runs.GitOrchestrator
+  alias AgentYard.Sandboxes.{Docker, Local}
+  alias AgentYard.Secrets
 
   def start_link(run_id) do
     GenServer.start_link(__MODULE__, run_id,
@@ -35,60 +38,105 @@ defmodule AgentYard.Runs.RunProcess do
 
         Runs.broadcast(run, {:run_updated, run})
 
-        {:ok, %{run: run, adapter: adapter_for(run), adapter_state: nil, failed: false},
-         {:continue, :start}}
+        secret_values = Secrets.values_for_run(run.team_id, run.session.repository_id)
+
+        {:ok,
+         %{
+           run: run,
+           adapter: adapter_for(run),
+           adapter_state: nil,
+           failed: false,
+           secret_values: secret_values,
+           run_config: nil,
+           sandbox: nil,
+           timeout_ref: nil
+         }, {:continue, :start}}
     end
   end
 
   @impl true
   def handle_continue(:start, state) do
     owner = self()
-    config = adapter_config(state.run)
+    config = adapter_config(state.run, state.secret_values)
+    sandbox = sandbox_for(state.run)
+    state = %{state | run_config: config, sandbox: sandbox}
 
-    with {:ok, prepared} <- state.adapter.prepare(config),
-         {:ok, adapter_state} <-
-           state.adapter.start(prepared, fn event -> send(owner, {:adapter_event, event}) end) do
-      {:noreply, %{state | adapter_state: adapter_state}}
+    with {:ok, sandbox_config} <-
+           sandbox.prepare(Map.put(config, :sandbox_module, sandbox)),
+         {:ok, prepared, setup_events} <- GitOrchestrator.prepare(state.run, sandbox_config) do
+      state =
+        state
+        |> Map.put(:run_config, prepared)
+        |> persist_events([Event.status("Starting #{sandbox_name(sandbox)} sandbox") | setup_events])
+
+      case state.adapter.prepare(prepared) do
+        {:ok, adapter_config} ->
+          case state.adapter.start(adapter_config, fn event ->
+                 send(owner, {:adapter_event, event})
+               end) do
+            {:ok, adapter_state} ->
+              {:noreply,
+               %{
+                 state
+                 | adapter_state: adapter_state,
+                   run_config: adapter_config,
+                   timeout_ref: schedule_timeout(state.run.timeout_seconds)
+               }}
+
+            {:error, reason} ->
+              stop_failed(state, reason)
+          end
+
+        {:error, reason} ->
+          stop_failed(state, reason)
+      end
     else
       {:error, reason} ->
-        {:stop, {:adapter_start_failed, reason}, mark_failed(state, inspect(reason))}
+        stop_failed(state, reason)
     end
   end
 
   @impl true
   def handle_info({:adapter_event, %Event{} = event}, state) do
-    {:ok, record} = Runs.record_event(state.run, event)
-    {:ok, run} = Runs.apply_event(state.run, event)
-    state = %{state | run: run}
-    Runs.broadcast(run, {:run_event, run.id, record})
-    Runs.broadcast(run, {:run_updated, run})
+    event = Event.mask(event, state.secret_values)
+    state = persist_event(state, event)
 
     case event.type do
+      "done" ->
+        complete_run(state)
+
       "error" ->
         {:noreply, mark_failed(state, event.message || "Agent error")}
 
-      "done" ->
-        status = if state.failed, do: "failed", else: "succeeded"
-        {:ok, run} = Runs.update_status(run, status, %{finished_at: DateTime.utc_now()})
-        Runs.broadcast(run, {:run_updated, run})
-        {:stop, :normal, %{state | run: run}}
-
       _ ->
-        {:noreply, state}
+        if budget_exceeded?(state.run) do
+          stop_for_budget(state)
+        else
+          {:noreply, state}
+        end
     end
   end
 
   def handle_info({:adapter_event, _event}, state), do: {:noreply, state}
+
+  def handle_info(:run_timeout, state) do
+    message = "Run exceeded its #{state.run.timeout_seconds || 3600}s wall-clock timeout"
+    _ = if state.adapter_state, do: state.adapter.cancel(state.adapter_state), else: :ok
+    state = persist_event(state, Event.error(message))
+    state = mark_failed(state, message, true)
+    cleanup(state)
+    {:stop, :normal, state}
+  end
+
   def handle_info(_message, state), do: {:noreply, state}
 
   @impl true
   def handle_call(:cancel, _from, state) do
     _ = if state.adapter_state, do: state.adapter.cancel(state.adapter_state), else: :ok
+    state = persist_event(state, Event.status("Run cancelled"))
     {:ok, run} = Runs.update_status(state.run, "cancelled", %{finished_at: DateTime.utc_now()})
-    event = Event.status("Run cancelled")
-    {:ok, record} = Runs.record_event(run, event)
-    Runs.broadcast(run, {:run_event, run.id, record})
     Runs.broadcast(run, {:run_updated, run})
+    cleanup(%{state | run: run})
     {:stop, :normal, :ok, %{state | run: run}}
   end
 
@@ -105,10 +153,129 @@ defmodule AgentYard.Runs.RunProcess do
     end
   end
 
-  defp mark_failed(state, message) do
-    {:ok, run} = Runs.update_status(state.run, "failed", %{error: message})
+  defp complete_run(%{failed: true} = state), do: finish_run(state)
+
+  defp complete_run(state) do
+    case GitOrchestrator.finalize(state.run, state.run_config) do
+      {:ok, change, events} ->
+        state = persist_events(state, events)
+        state = apply_change(state, change)
+        finish_run(state)
+
+      {:error, reason} ->
+        message = safe_message(reason, state.secret_values)
+        state = persist_event(state, Event.error("Could not publish changes: #{message}"))
+        state = mark_failed(state, message, true)
+        cleanup(state)
+        {:stop, :normal, state}
+    end
+  end
+
+  defp finish_run(state) do
+    status = if state.failed, do: "failed", else: "succeeded"
+    {:ok, run} = Runs.update_status(state.run, status, %{finished_at: DateTime.utc_now()})
+    Runs.broadcast(run, {:run_updated, run})
+    state = cancel_timeout(%{state | run: run})
+    cleanup(state)
+    {:stop, :normal, state}
+  end
+
+  defp stop_for_budget(state) do
+    message = "Run stopped because budget exceeded (limit $#{budget(state.run)})"
+    _ = if state.adapter_state, do: state.adapter.cancel(state.adapter_state), else: :ok
+    state = persist_event(state, Event.error(message))
+    state = mark_failed(state, message, true)
+    cleanup(state)
+    {:stop, :normal, state}
+  end
+
+  defp stop_failed(state, reason) do
+    message = safe_message(reason, state.secret_values)
+    state = persist_event(state, Event.error(message))
+    state = mark_failed(state, message, true)
+    cleanup(state)
+    {:stop, {:run_failed, reason}, state}
+  end
+
+  defp mark_failed(state, message, finish \\ false) do
+    attrs = if finish, do: %{finished_at: DateTime.utc_now()}, else: %{}
+    {:ok, run} = Runs.update_status(state.run, "failed", Map.put(attrs, :error, message))
     Runs.broadcast(run, {:run_updated, run})
     %{state | run: run, failed: true}
+  end
+
+  defp persist_events(state, events),
+    do: Enum.reduce(events, state, &persist_event(&2, &1))
+
+  defp persist_event(state, %Event{} = event) do
+    {:ok, record} = Runs.record_event(state.run, event)
+    {:ok, run} = Runs.apply_event(state.run, event)
+    Runs.broadcast(run, {:run_event, run.id, record})
+    Runs.broadcast(run, {:run_updated, run})
+    %{state | run: run}
+  end
+
+  defp apply_change(state, nil), do: state
+
+  defp apply_change(state, %{url: url}) do
+    attrs =
+      case state.run.session.repository.forge do
+        "gitlab" -> %{merge_request_url: url}
+        _ -> %{pr_url: url}
+      end
+
+    case Runs.update_run(state.run, attrs) do
+      {:ok, run} ->
+        Runs.broadcast(run, {:run_updated, run})
+        %{state | run: run}
+
+      {:error, _changeset} ->
+        state
+    end
+  end
+
+  defp cleanup(%{sandbox: nil}), do: :ok
+
+  defp cleanup(%{sandbox: sandbox, run_config: config}) do
+    _ = sandbox.cleanup(config || %{})
+    :ok
+  end
+
+  defp cancel_timeout(%{timeout_ref: nil} = state), do: state
+
+  defp cancel_timeout(%{timeout_ref: ref} = state) do
+    _ = Process.cancel_timer(ref)
+    %{state | timeout_ref: nil}
+  end
+
+  defp schedule_timeout(nil), do: nil
+
+  defp schedule_timeout(seconds) when is_integer(seconds) and seconds > 0,
+    do: Process.send_after(self(), :run_timeout, seconds * 1_000)
+
+  defp schedule_timeout(_seconds), do: nil
+
+  defp budget_exceeded?(run) do
+    case run.session.agent_profile.budget_usd do
+      nil ->
+        false
+
+      budget ->
+        Decimal.compare(run.cost_usd || Decimal.new("0"), budget) == :gt
+    end
+  end
+
+  defp budget(%{session: %{agent_profile: %{budget_usd: budget}}}) when not is_nil(budget),
+    do: Decimal.to_string(budget)
+
+  defp budget(_run), do: "0"
+
+  defp safe_message(reason, secrets) do
+    reason
+    |> inspect()
+    |> Event.error()
+    |> Event.mask(secrets)
+    |> Map.get(:message)
   end
 
   defp adapter_for(%{session: %{agent_profile: %{provider: "claude_code"}}}),
@@ -120,17 +287,37 @@ defmodule AgentYard.Runs.RunProcess do
   defp adapter_for(%{session: %{agent_profile: %{provider: "openrouter"}}}),
     do: AgentYard.Agents.OpenRouter
 
-  defp adapter_for(_run), do: AgentYard.Agents.Fake
+  defp adapter_for(%{session: %{agent_profile: %{provider: "fake"}}}), do: Fake
+  defp adapter_for(_run), do: Fake
 
-  defp adapter_config(%{prompt: prompt, session: %{agent_profile: profile}, id: run_id}) do
+  defp sandbox_for(%{environment: "docker"}), do: Docker
+  defp sandbox_for(_run), do: Local
+
+  defp sandbox_name(Docker), do: "Docker"
+  defp sandbox_name(Local), do: "local"
+  defp sandbox_name(_), do: "configured"
+
+  defp adapter_config(
+         %{prompt: prompt, session: %{agent_profile: profile, repository: repository}} = run,
+         env
+       ) do
     %{
       prompt: prompt,
-      run_id: run_id,
+      run_id: run.id,
       model: profile.model,
+      base_url: profile.base_url,
       instructions: profile.instructions,
       permission_mode: profile.permission_mode,
       budget_usd: profile.budget_usd,
-      env: %{}
+      env: env,
+      environment: run.environment,
+      image: repository.environment_image,
+      cpus: Application.get_env(:agentyard, :sandbox_cpus, 2),
+      memory: Application.get_env(:agentyard, :sandbox_memory, "2g"),
+      network: Application.get_env(:agentyard, :sandbox_network, "none"),
+      network_allowlist: Application.get_env(:agentyard, :sandbox_network_allowlist, []),
+      agent_provider: profile.provider,
+      workspace_root: Application.get_env(:agentyard, :workspace_root)
     }
   end
 end
