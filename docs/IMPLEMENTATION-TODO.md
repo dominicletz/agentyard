@@ -40,8 +40,8 @@ hardening remains.
 | M24 | Trigger runs from GitHub labels | Partial |
 | M25 | Trigger runs from GitLab @mentions | Partial |
 | M26 | Trigger runs from GitLab labels | Partial |
-| M27 | Post progress comments to the source issue or PR | Partial |
-| M28 | Post result comments with the PR/MR link | Partial |
+| M27 | Post progress comments to the source issue or PR | Done |
+| M28 | Post result comments with the PR/MR link | Done |
 | M29 | Reject fork pull requests without a trusted workspace | Partial |
 | M30 | Check mentioner write permission and document token-based App boundary | Partial |
 
@@ -50,11 +50,11 @@ hardening remains.
 | ID | MVP item | Status |
 |---|---|---|
 | M31 | Enforce a wall-clock timeout | Done |
-| M32 | Enforce a maximum-turn limit | Partial |
+| M32 | Enforce a maximum-turn limit | Done |
 | M33 | Steer a running agent with a follow-up | Done |
-| M34 | Enforce `Accounts.authorize` on mutating UI/API operations | Partial |
-| M35 | Keep run visibility member-only or add a viewer role | Partial |
-| M36 | Record a basic audit event for mutations | Partial |
+| M34 | Enforce `Accounts.authorize` on mutating UI/API operations | Done |
+| M35 | Keep run visibility member-only or add a viewer role | Done |
+| M36 | Record a basic audit event for mutations | Done |
 | M37 | Keep magic-link authentication deferred with an explicit boundary | Partial |
 | M38 | Preserve explicit queued/running/succeeded/failed/cancelled state transitions | Done |
 | M39 | Retry provisioning failures without replaying agent turns | Partial |
@@ -64,7 +64,7 @@ hardening remains.
 
 | ID | MVP item | Status |
 |---|---|---|
-| M41 | Show terminal output from normalized tool-result events | Partial |
+| M41 | Show terminal output from normalized tool-result events | Done |
 | M42 | Show a real workspace diff | Partial |
 | M43 | Filter runs by status and prompt | Done |
 | M44 | Expose `GET /api/repositories` | Partial |
@@ -91,6 +91,8 @@ hardening remains.
 
 The first complete slice is Sprint A. Forge publication intentionally becomes
 a clear status event when a token is absent, so the Fake adapter remains
-usable in a fresh development database. GitHub App installation UX, webhook
-event mapping, allowlist enforcement, and the remaining Sprint B–D items are
+usable in a fresh development database. Sprint B now includes signed webhook
+dispatch and best-effort issue/PR comments; GitHub App installation UX and
+live forge permission lookups remain open. Domain-level allowlist enforcement,
+durable diffs, MCP/ACP passthrough, and the remaining Sprint D items are
 follow-up work rather than silent no-ops.

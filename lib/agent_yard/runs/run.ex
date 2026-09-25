@@ -18,6 +18,7 @@ defmodule AgentYard.Runs.Run do
     field(:environment, :string, default: "local")
     field(:issue_url, :string)
     field(:timeout_seconds, :integer, default: 3600)
+    field(:max_turns, :integer)
     field(:input_tokens, :integer, default: 0)
     field(:output_tokens, :integer, default: 0)
     field(:cache_tokens, :integer, default: 0)
@@ -54,6 +55,7 @@ defmodule AgentYard.Runs.Run do
       :environment,
       :issue_url,
       :timeout_seconds,
+      :max_turns,
       :input_tokens,
       :output_tokens,
       :cache_tokens,
@@ -69,5 +71,6 @@ defmodule AgentYard.Runs.Run do
     |> validate_length(:prompt, min: 1, max: 100_000)
     |> validate_inclusion(:environment, ~w(local docker))
     |> validate_number(:timeout_seconds, greater_than: 0)
+    |> validate_number(:max_turns, greater_than: 0)
   end
 end

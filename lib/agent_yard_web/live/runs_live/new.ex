@@ -73,6 +73,10 @@ defmodule AgentYardWeb.RunsLive.New do
               </select>
             </label>
           </div>
+          <div class="form-grid two">
+            <label>Timeout (seconds)<input name="timeout_seconds" type="number" min="1" value="3600" /></label>
+            <label>Maximum tool turns <span class="muted">(optional)</span><input name="max_turns" type="number" min="1" /></label>
+          </div>
           <div class="check-row">
             <label class="checkbox"><input type="checkbox" name="auto_pr" value="true" checked /> Auto-open PR / MR</label>
             <label class="checkbox"><input type="checkbox" name="run_tests" value="true" checked /> Run tests</label>

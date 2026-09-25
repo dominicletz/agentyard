@@ -19,13 +19,19 @@ defmodule AgentYardWeb.TeamLive.Settings do
 
   @impl true
   def handle_event("add-secret", %{"name" => name, "value" => value}, socket) do
-    case Secrets.put(socket.assigns.team.id, %{name: name, value: value, scope: "team"}) do
-      {:ok, _secret} ->
-        {:noreply,
-         assign(socket, secrets: Secrets.list_for_team(socket.assigns.team.id), error: nil)}
+    case Accounts.authorize(socket.assigns.current_user, socket.assigns.team, ~w(owner admin)) do
+      :ok ->
+        case Secrets.put(socket.assigns.team.id, %{name: name, value: value, scope: "team"}) do
+          {:ok, _secret} ->
+            {:noreply,
+             assign(socket, secrets: Secrets.list_for_team(socket.assigns.team.id), error: nil)}
 
-      {:error, changeset} ->
-        {:noreply, assign(socket, error: inspect(changeset.errors))}
+          {:error, changeset} ->
+            {:noreply, assign(socket, error: inspect(changeset.errors))}
+        end
+
+      {:error, :forbidden} ->
+        {:noreply, assign(socket, error: "Only owners and admins can manage secrets.")}
     end
   end
 
@@ -37,7 +43,7 @@ defmodule AgentYardWeb.TeamLive.Settings do
       <section class="panel">
         <div class="panel-heading"><h2>Members</h2><span class="tag tag-muted"><%= length(@members) %> members</span></div>
         <div :for={member <- @members} class="list-row"><span class="avatar avatar-small"><%= initials(member.email) %></span><div><strong><%= member.name %></strong><small><%= member.email %></small></div><span class="role-pill"><%= member.role %></span></div>
-        <div class="settings-note"><strong>Role policy</strong><p class="muted">Owners and admins can manage repositories, profiles and secrets. Members can start and follow runs in their team.</p></div>
+        <div class="settings-note"><strong>Role policy</strong><p class="muted">Owners and admins can manage repositories, profiles and secrets. Members can start and follow runs; viewers can inspect team runs without mutations.</p></div>
       </section>
       <section class="panel">
         <div class="panel-heading"><h2>Secrets vault</h2><span class="ready-pill">● Encrypted</span></div>

@@ -132,6 +132,11 @@ defmodule AgentYardWeb.Api.RunController do
       base_branch: run.base_branch,
       branch_name: run.branch_name,
       adapter: run.adapter,
+      auto_pr: run.auto_pr,
+      environment: run.environment,
+      issue_url: run.issue_url,
+      timeout_seconds: run.timeout_seconds,
+      max_turns: run.max_turns,
       usage: %{
         input_tokens: run.input_tokens || 0,
         output_tokens: run.output_tokens || 0,

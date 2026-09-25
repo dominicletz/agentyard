@@ -46,6 +46,7 @@ defmodule AgentYard.Runs.RunProcess do
            adapter: adapter_for(run),
            adapter_state: nil,
            failed: false,
+           turns: 0,
            secret_values: secret_values,
            run_config: nil,
            sandbox: nil,
@@ -107,6 +108,7 @@ defmodule AgentYard.Runs.RunProcess do
   def handle_info({:adapter_event, %Event{} = event}, state) do
     event = Event.mask(event, state.secret_values)
     state = persist_event(state, event)
+    state = track_turn(state, event)
 
     case event.type do
       "done" ->
@@ -116,10 +118,10 @@ defmodule AgentYard.Runs.RunProcess do
         {:noreply, mark_failed(state, event.message || "Agent error")}
 
       _ ->
-        if budget_exceeded?(state.run) do
-          stop_for_budget(state)
-        else
-          {:noreply, state}
+        cond do
+          max_turns_exceeded?(state) -> stop_for_turn_limit(state)
+          budget_exceeded?(state.run) -> stop_for_budget(state)
+          true -> {:noreply, state}
         end
     end
   end
@@ -196,6 +198,15 @@ defmodule AgentYard.Runs.RunProcess do
     {:stop, :normal, state}
   end
 
+  defp stop_for_turn_limit(state) do
+    message = "Run stopped because maximum turns (#{state.run.max_turns}) was exceeded"
+    _ = if state.adapter_state, do: state.adapter.cancel(state.adapter_state), else: :ok
+    state = persist_event(state, Event.error(message))
+    state = mark_failed(state, message, true)
+    cleanup(state)
+    {:stop, :normal, state}
+  end
+
   defp stop_failed(state, reason) do
     message = safe_message(reason, state.secret_values)
     state = persist_event(state, Event.error(message))
@@ -221,6 +232,9 @@ defmodule AgentYard.Runs.RunProcess do
     Runs.broadcast(run, {:run_updated, run})
     %{state | run: run}
   end
+
+  defp track_turn(state, %Event{type: "tool_call"}), do: %{state | turns: state.turns + 1}
+  defp track_turn(state, _event), do: state
 
   defp apply_change(state, nil), do: state
 
@@ -277,6 +291,9 @@ defmodule AgentYard.Runs.RunProcess do
 
   defp budget(_run), do: "0"
 
+  defp max_turns_exceeded?(%{run: %{max_turns: nil}}), do: false
+  defp max_turns_exceeded?(%{run: %{max_turns: max_turns}, turns: turns}), do: turns > max_turns
+
   defp safe_message(reason, secrets) do
     reason
     |> inspect()
@@ -324,6 +341,7 @@ defmodule AgentYard.Runs.RunProcess do
       network: Application.get_env(:agentyard, :sandbox_network, "none"),
       network_allowlist: Application.get_env(:agentyard, :sandbox_network_allowlist, []),
       agent_provider: profile.provider,
+      max_turns: run.max_turns,
       workspace_root: Application.get_env(:agentyard, :workspace_root)
     }
   end

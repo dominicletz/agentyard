@@ -109,3 +109,15 @@ components:
           type: string
         trigger:
           type: string
+        auto_pr:
+          type: boolean
+          default: true
+        environment:
+          type: string
+          enum: [local, docker]
+        timeout_seconds:
+          type: integer
+          minimum: 1
+        max_turns:
+          type: integer
+          minimum: 1

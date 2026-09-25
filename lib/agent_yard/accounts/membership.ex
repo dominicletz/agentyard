@@ -2,7 +2,7 @@ defmodule AgentYard.Accounts.Membership do
   use Ecto.Schema
   import Ecto.Changeset
 
-  @roles ~w(owner admin member)
+  @roles ~w(owner admin member viewer)
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id

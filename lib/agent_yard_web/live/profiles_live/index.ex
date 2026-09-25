@@ -1,7 +1,7 @@
 defmodule AgentYardWeb.ProfilesLive.Index do
   use AgentYardWeb, :live_view
 
-  alias AgentYard.AgentProfiles
+  alias AgentYard.{Accounts, AgentProfiles}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -16,9 +16,15 @@ defmodule AgentYardWeb.ProfilesLive.Index do
 
   @impl true
   def handle_event("create", params, socket) do
-    case AgentProfiles.create(socket.assigns.team.id, params) do
-      {:ok, _profile} -> {:noreply, assign(socket, profiles: profiles(socket), error: nil)}
-      {:error, changeset} -> {:noreply, assign(socket, error: inspect(changeset.errors))}
+    case Accounts.authorize(socket.assigns.current_user, socket.assigns.team, ~w(owner admin)) do
+      :ok ->
+        case AgentProfiles.create(socket.assigns.team.id, params) do
+          {:ok, _profile} -> {:noreply, assign(socket, profiles: profiles(socket), error: nil)}
+          {:error, changeset} -> {:noreply, assign(socket, error: inspect(changeset.errors))}
+        end
+
+      {:error, :forbidden} ->
+        {:noreply, assign(socket, error: "Only owners and admins can create profiles.")}
     end
   end
 

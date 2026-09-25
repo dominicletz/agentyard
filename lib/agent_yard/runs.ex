@@ -7,12 +7,14 @@ defmodule AgentYard.Runs do
   alias AgentYard.Accounts.{Team, User}
   alias AgentYard.AgentProfiles.Profile
   alias AgentYard.Agents.Event
+  alias AgentYard.Audit
   alias AgentYard.Repo
   alias AgentYard.Repositories.Repository
   alias AgentYard.Runs.{Run, RunEvent, RunProcess, Session, Worker}
 
   @topic_prefix "run:"
   @team_topic_prefix "team:"
+  @mutation_roles ~w(owner admin member)
 
   def list_runs(%Team{id: team_id}, filters \\ %{}) do
     Run
@@ -47,6 +49,12 @@ defmodule AgentYard.Runs do
   end
 
   def create_run(%User{} = user, %Team{id: team_id}, attrs) do
+    with :ok <- AgentYard.Accounts.authorize(user, %Team{id: team_id}, @mutation_roles) do
+      create_run_for_authorized(user, team_id, attrs)
+    end
+  end
+
+  defp create_run_for_authorized(%User{} = user, team_id, attrs) do
     repository = Repo.get_by!(Repository, id: attr(attrs, :repository_id), team_id: team_id)
     profile = Repo.get_by!(Profile, id: attr(attrs, :agent_profile_id), team_id: team_id)
     branch = attr(attrs, :branch_name) || generated_branch()
@@ -79,12 +87,21 @@ defmodule AgentYard.Runs do
         environment: environment,
         issue_url: attr(attrs, :issue_url),
         timeout_seconds: integer_attr(attrs, :timeout_seconds, 3600),
+        max_turns: integer_attr(attrs, :max_turns, nil),
         status: "queued"
       })
       |> Repo.insert()
     end)
     |> unwrap_transaction()
+    |> audit_created(user)
   end
+
+  defp audit_created(%Run{} = run, user) do
+    _ = Audit.log(run.team_id, user.id, "run.created", "run", run.id)
+    run
+  end
+
+  defp audit_created(result, _user), do: result
 
   def follow_up(%Run{} = run, %User{} = user, prompt) when is_binary(prompt) do
     with :ok <- authorize_run(run, user) do
@@ -104,6 +121,7 @@ defmodule AgentYard.Runs do
         environment: run.environment,
         issue_url: run.issue_url,
         timeout_seconds: run.timeout_seconds,
+        max_turns: run.max_turns,
         status: "queued"
       })
       |> Repo.insert()
@@ -248,7 +266,23 @@ defmodule AgentYard.Runs do
   end
 
   def update_status(%Run{} = run, status, attrs \\ %{}) do
-    update_run(run, Map.merge(attrs, %{status: status}))
+    case update_run(run, Map.merge(attrs, %{status: status})) do
+      {:ok, updated} = result ->
+        _ =
+          Audit.log(
+            updated.team_id,
+            updated.user_id,
+            "run.status_changed",
+            "run",
+            updated.id,
+            %{status: status}
+          )
+
+        result
+
+      error ->
+        error
+    end
   end
 
   def update_run(%Run{} = run, attrs) do
@@ -279,10 +313,7 @@ defmodule AgentYard.Runs do
     do: Phoenix.PubSub.subscribe(AgentYard.PubSub, team_topic(team_id))
 
   def authorize_run(%Run{team_id: team_id}, %User{} = user) do
-    case AgentYard.Accounts.team_for_user(user) do
-      %Team{id: ^team_id} -> :ok
-      _ -> {:error, :forbidden}
-    end
+    AgentYard.Accounts.authorize(user, %Team{id: team_id}, @mutation_roles)
   end
 
   defp maybe_filter_status(query, %{status: status}) when status not in [nil, "", "all"],

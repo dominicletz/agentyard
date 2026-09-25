@@ -36,7 +36,7 @@ defmodule AgentYard.Agents.OpenRouter do
   def normalize(_payload), do: :ignore
 
   defp request(config, callback) do
-    url = config[:base_url] || "https://openrouter.ai/api/v1/chat/completions"
+    url = endpoint_url(config[:base_url])
 
     api_key =
       config[:api_key] ||
@@ -102,5 +102,15 @@ defmodule AgentYard.Agents.OpenRouter do
 
     messages = if system == "", do: [], else: [%{role: "system", content: system}]
     messages ++ [%{role: "user", content: config[:prompt] || ""}]
+  end
+
+  defp endpoint_url(nil), do: "https://openrouter.ai/api/v1/chat/completions"
+
+  defp endpoint_url(base_url) do
+    base_url = String.trim_trailing(base_url, "/")
+
+    if String.ends_with?(base_url, "/chat/completions"),
+      do: base_url,
+      else: base_url <> "/chat/completions"
   end
 end

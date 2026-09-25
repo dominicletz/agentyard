@@ -32,7 +32,10 @@ defmodule AgentYard.Runs.GitOrchestrator do
          forge_token: forge_config[:token],
          git_prepared: true,
          branch: branch
-       }), events ++ [Event.status("Workspace ready on #{run.branch_name}")]}
+       }),
+       events ++
+         [Event.status("Workspace ready on #{run.branch_name}")] ++
+         progress_comment_events(run, provider, forge_config)}
     end
   end
 
@@ -157,7 +160,8 @@ defmodule AgentYard.Runs.GitOrchestrator do
              title,
              body
            ) do
-      {:ok, change, [Event.status("Opened #{change_label(run.session.repository.forge)}")]}
+      events = [Event.status("Opened #{change_label(run.session.repository.forge)}")]
+      {:ok, change, events ++ result_comment_events(run, config, change)}
     end
   end
 
@@ -179,4 +183,36 @@ defmodule AgentYard.Runs.GitOrchestrator do
 
   defp change_label("gitlab"), do: "merge request"
   defp change_label(_forge), do: "pull request"
+
+  defp progress_comment_events(%Run{issue_url: issue_url}, _provider, _config)
+       when not is_binary(issue_url),
+       do: []
+
+  defp progress_comment_events(_run, _provider, %{token: nil}), do: []
+
+  defp progress_comment_events(run, provider, config) do
+    case provider.post_comment(
+           config,
+           run.issue_url,
+           "AgentYard started a run for `#{run.branch_name}`."
+         ) do
+      :ok -> [Event.status("Posted run progress comment")]
+      {:error, _reason} -> [Event.status("Run progress comment skipped")]
+    end
+  end
+
+  defp result_comment_events(%Run{issue_url: issue_url}, _config, _change)
+       when not is_binary(issue_url),
+       do: []
+
+  defp result_comment_events(_run, %{forge_token: nil}, _change), do: []
+
+  defp result_comment_events(run, config, change) do
+    body = "AgentYard completed the run. Review the changes at #{change[:url]}."
+
+    case config.git_provider.post_comment(config.forge_config, run.issue_url, body) do
+      :ok -> [Event.status("Posted run result comment")]
+      {:error, _reason} -> [Event.status("Run result comment skipped")]
+    end
+  end
 end

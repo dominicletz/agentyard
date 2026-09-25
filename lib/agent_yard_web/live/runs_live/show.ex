@@ -102,6 +102,10 @@ defmodule AgentYardWeb.RunsLive.Show do
           <textarea name="prompt" rows="3" placeholder="Send a follow-up to the running agent…"></textarea>
           <div class="follow-up-footer"><span class="muted">Enter to send · Shift+Enter newline</span><button class="button button-primary" type="submit">Send follow-up</button></div>
         </form>
+        <div class="inspection-panels">
+          <section class="panel side-card"><h2>Terminal output</h2><pre class="terminal-output"><%= terminal_output(@events) %></pre></section>
+          <section class="panel side-card"><h2>Diff signals</h2><pre class="terminal-output"><%= diff_signals(@events) %></pre></section>
+        </div>
       </section>
 
       <aside class="stack">
@@ -135,6 +139,32 @@ defmodule AgentYardWeb.RunsLive.Show do
 
   defp event_payload(%{payload: payload}) do
     payload["input"] || payload["output"] || payload["text"]
+  end
+
+  defp terminal_output(events) do
+    events
+    |> Enum.filter(&(&1.kind == "tool_result"))
+    |> Enum.map_join("\n", fn event ->
+      "#{event.payload["tool"] || "tool"}: #{event.payload["output"] || ""}"
+    end)
+    |> case do
+      "" -> "No terminal output yet."
+      output -> output
+    end
+  end
+
+  defp diff_signals(events) do
+    events
+    |> Enum.filter(&(&1.kind in ["tool_call", "tool_result"]))
+    |> Enum.map_join("\n", fn event ->
+      tool = event.payload["tool"] || "tool"
+      value = event.payload["input"] || event.payload["output"] || ""
+      "#{tool}: #{value}"
+    end)
+    |> case do
+      "" -> "No tool or diff signals yet."
+      output -> output
+    end
   end
 
   defp event_time(nil), do: ""

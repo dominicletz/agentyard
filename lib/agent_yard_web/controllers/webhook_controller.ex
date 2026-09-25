@@ -129,6 +129,7 @@ defmodule AgentYardWeb.WebhookController do
     label = get_in(params, ["label", "name"]) || ""
 
     with :ok <- permitted?(sender, repository),
+         :ok <- reject_fork(params),
          true <- params["action"] == "labeled" and label in @labels do
       {:ok,
        %{

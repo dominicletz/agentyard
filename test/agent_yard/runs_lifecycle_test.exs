@@ -1,6 +1,9 @@
 defmodule AgentYard.RunsLifecycleTest do
   use ExUnit.Case, async: false
 
+  import Ecto.Query
+
+  alias AgentYard.Audit.Event, as: AuditEvent
   alias AgentYard.Repo
   alias AgentYard.Runs
   alias AgentYard.Runs.{RunEvent, Session}
@@ -44,6 +47,7 @@ defmodule AgentYard.RunsLifecycleTest do
       assert Enum.any?(events, &(&1.kind == "done"))
       assert Enum.all?(events, &match?(%RunEvent{}, &1))
       assert Repo.get!(Session, run.session_id).status == "active"
+      assert Repo.exists?(from(audit in AuditEvent, where: audit.subject_id == ^run.id))
     end
   end
 
@@ -117,6 +121,32 @@ defmodule AgentYard.RunsLifecycleTest do
       assert Enum.any?(events, fn event ->
                is_binary(event.payload["message"]) and
                  event.payload["message"] =~ "budget exceeded"
+             end)
+    end
+  end
+
+  test "stops a run after its maximum tool turns", context do
+    if context[:database] == false do
+      assert true
+    else
+      {:ok, run} =
+        Runs.create_run(context.user, context.team, %{
+          repository_id: context.repository.id,
+          agent_profile_id: context.profile.id,
+          prompt: "Stop after one turn",
+          max_turns: 1
+        })
+
+      assert {:ok, _job} = Runs.start_run(run)
+
+      assert TestFactory.eventually(fn ->
+               Repo.get!(AgentYard.Runs.Run, run.id).status == "failed"
+             end)
+
+      events = Runs.list_events(Repo.get!(AgentYard.Runs.Run, run.id))
+
+      assert Enum.any?(events, fn event ->
+               is_binary(event.payload["message"]) and event.payload["message"] =~ "maximum turns"
              end)
     end
   end

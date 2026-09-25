@@ -42,7 +42,8 @@ CI additionally creates and migrates a Postgres database.
   Run detail, Repositories, Agent profiles and Team settings.
 - Ecto/Postgres schemas for users, teams, memberships, repositories, profiles,
   secrets, sessions, runs and normalized event logs.
-- Password authentication, team membership roles (`owner`, `admin`, `member`),
+- Password authentication, team membership roles (`owner`, `admin`, `member`,
+  `viewer`),
   session auth, personal bearer API tokens and team-scoped authorization.
 - OTP `DynamicSupervisor` plus a per-run `GenServer`, PubSub timeline updates
   and an Oban worker boundary for queued runs.
@@ -71,10 +72,12 @@ attempting a write.
 
 Docker runs default to a deny-all network and expose an allowlist hook, but
 domain-level egress enforcement, image builds from repository configuration,
-and persistent follow-up volumes still need hardening. Webhook event mapping,
-progress comments, diff persistence, MCP configuration and audit exports
-remain roadmap work. SSO, invitation email, CI feedback loops and
-remote/Kubernetes runners remain out of this milestone.
+and persistent follow-up volumes still need hardening. Webhook signature,
+mention/label dispatch, and best-effort progress/result comments are wired;
+GitHub App installation UX, complete forge permission lookups, diff
+persistence, MCP configuration and audit exports remain roadmap work. SSO,
+invitation email, CI feedback loops and remote/Kubernetes runners remain out
+of this milestone.
 
 ## Architecture
 
