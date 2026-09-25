@@ -6,10 +6,19 @@ defmodule AgentYard.Agents.CLI do
   alias AgentYard.Agents.{Event, StreamParser}
 
   def start(config, callback, provider, executables) do
-    executable = Enum.find_value(executables, &System.find_executable/1)
+    executable =
+      case config[:sandbox_module] do
+        AgentYard.Sandboxes.Docker -> List.first(executables)
+        _ -> Enum.find_value(executables, &System.find_executable/1)
+      end
 
     if executable do
-      state = %{config: config, callback: callback, provider: provider, worker: nil}
+      state = %{
+        config: Map.put(config, :executable, executable),
+        callback: callback,
+        provider: provider,
+        worker: nil
+      }
       {:ok, launch(state)}
     else
       {:error, {:missing_executable, executables}}

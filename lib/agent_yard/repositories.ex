@@ -29,9 +29,9 @@ defmodule AgentYard.Repositories do
 
     from(r in Repository,
       where:
-        (not is_nil(^full_name) and r.name == ^full_name) or
-          (not is_nil(^clone_url) and r.remote_url == ^clone_url) or
-          (not is_nil(^html_url) and r.remote_url == ^html_url),
+        r.name == ^full_name or
+          r.remote_url == ^clone_url or
+          r.remote_url == ^html_url,
       limit: 1
     )
     |> Repo.one()
