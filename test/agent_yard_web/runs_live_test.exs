@@ -35,7 +35,7 @@ defmodule AgentYardWeb.RunsLiveTest do
       assert true
     else
       assert {:ok, _view, html} = live(context.conn, "/runs/new")
-      assert html =~ "Start a run"
+      assert html =~ "Start run"
       assert html =~ "What happens next"
     end
   end
