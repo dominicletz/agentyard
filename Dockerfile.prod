@@ -41,7 +41,7 @@ ENV LANG=C.UTF-8 \
     HOME=/home/agentyard
 
 RUN apt-get update -qq \
-    && apt-get install -y --no-install-recommends ca-certificates curl libncurses6 libstdc++6 openssl \
+    && apt-get install -y --no-install-recommends adduser ca-certificates curl libncurses6 libstdc++6 openssl \
     && rm -rf /var/lib/apt/lists/* \
     && addgroup --system agentyard \
     && adduser --system --ingroup agentyard --home /home/agentyard agentyard
