@@ -28,6 +28,7 @@ defmodule AgentYard.MixProject do
       {:ecto_sql, "~> 3.14"},
       {:esbuild, "~> 0.10", runtime: Mix.env() == :dev},
       {:gen_smtp, "~> 1.3"},
+      {:hackney, "~> 4.8"},
       {:oban, "~> 2.24"},
       {:phoenix, "~> 1.8.14"},
       {:phoenix_ecto, "~> 4.7"},
