@@ -33,6 +33,7 @@ defmodule AgentYard.Runs.GitOrchestrator do
          git_prepared: true,
          branch: branch
        }), events ++ [Event.status("Workspace ready on #{run.branch_name}")]
+      }
     end
   end
 
