@@ -13,7 +13,17 @@ defmodule AgentYard.Agents.Fake do
   @impl true
   def start(config, callback) do
     prompt = config[:prompt] || config["prompt"] || "the requested change"
-    pid = spawn(fn -> run_script(prompt, callback) end)
+    env = config[:env] || %{}
+
+    pid =
+      spawn(fn ->
+        if map_size(env) > 0 do
+          callback.(Event.status("Scoped secrets injected into adapter environment"))
+        end
+
+        run_script(prompt, callback)
+      end)
+
     {:ok, %{worker: pid}}
   end
 

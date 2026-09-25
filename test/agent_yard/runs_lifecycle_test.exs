@@ -4,6 +4,7 @@ defmodule AgentYard.RunsLifecycleTest do
   alias AgentYard.Repo
   alias AgentYard.Runs
   alias AgentYard.Runs.{RunEvent, Session}
+  alias AgentYard.Secrets
   alias AgentYard.TestFactory
 
   setup do
@@ -25,7 +26,8 @@ defmodule AgentYard.RunsLifecycleTest do
           prompt: "Exercise the fake lifecycle"
         })
 
-      assert {:ok, _pid} = Runs.start_run(run)
+      assert {:ok, %{args: %{"run_id" => run_id}}} = Runs.start_run(run)
+      assert run_id == run.id
 
       assert TestFactory.eventually(fn ->
                Repo.get!(AgentYard.Runs.Run, run.id).status == "succeeded"
@@ -42,6 +44,76 @@ defmodule AgentYard.RunsLifecycleTest do
       assert Enum.any?(events, &(&1.kind == "done"))
       assert Enum.all?(events, &match?(%RunEvent{}, &1))
       assert Repo.get!(Session, run.session_id).status == "active"
+    end
+  end
+
+  test "injects scoped secrets and masks them in the event timeline", context do
+    if context[:database] == false do
+      assert true
+    else
+      {:ok, _team_secret} =
+        Secrets.put(context.team.id, %{name: "TEAM_TOKEN", value: "team-secret"})
+
+      {:ok, _repository_secret} =
+        Secrets.put(context.team.id, %{
+          name: "REPOSITORY_TOKEN",
+          value: "repository-secret",
+          scope: "repository",
+          repository_id: context.repository.id
+        })
+
+      {:ok, run} =
+        Runs.create_run(context.user, context.team, %{
+          repository_id: context.repository.id,
+          agent_profile_id: context.profile.id,
+          prompt: "Use repository-secret while fixing the task"
+        })
+
+      assert {:ok, _job} = Runs.start_run(run)
+
+      assert TestFactory.eventually(fn ->
+               Repo.get!(AgentYard.Runs.Run, run.id).status == "succeeded"
+             end)
+
+      events = Runs.list_events(Repo.get!(AgentYard.Runs.Run, run.id))
+
+      assert Enum.any?(
+               events,
+               &(&1.payload["message"] == "Scoped secrets injected into adapter environment")
+             )
+
+      serialized = Enum.map_join(events, "\n", &inspect(&1.payload))
+      refute serialized =~ "repository-secret"
+      refute serialized =~ "team-secret"
+      assert serialized =~ "[REDACTED]"
+    end
+  end
+
+  test "stops a run when its reported cost exceeds the profile budget", context do
+    if context[:database] == false do
+      assert true
+    else
+      profile =
+        TestFactory.profile_fixture(context.team, %{
+          name: "Tiny budget fake",
+          budget_usd: Decimal.new("0.01")
+        })
+
+      {:ok, run} =
+        Runs.create_run(context.user, context.team, %{
+          repository_id: context.repository.id,
+          agent_profile_id: profile.id,
+          prompt: "Exceed the tiny budget"
+        })
+
+      assert {:ok, _job} = Runs.start_run(run)
+
+      assert TestFactory.eventually(fn ->
+               Repo.get!(AgentYard.Runs.Run, run.id).status == "failed"
+             end)
+
+      events = Runs.list_events(Repo.get!(AgentYard.Runs.Run, run.id))
+      assert Enum.any?(events, &(&1.payload["message"] =~ "budget exceeded"))
     end
   end
 end
