@@ -8,7 +8,7 @@ defmodule AgentYard.Agents.CursorCLI do
   alias AgentYard.Agents.{CLI, StreamParser}
 
   @impl true
-  def prepare(config), do: {:ok, config}
+  def prepare(config), do: CLI.prepare(config)
 
   @impl true
   def start(config, callback),

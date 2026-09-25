@@ -20,4 +20,24 @@ defmodule AgentYard.Sandboxes.Local do
 
     {:ok, task.ref}
   end
+
+  @impl true
+  def port(config, [executable | args]) do
+    if File.dir?(config[:workspace]) do
+      {:ok,
+       Port.open({:spawn_executable, to_charlist(executable)}, [
+         :binary,
+         :exit_status,
+         {:line, 1_048_576},
+         {:args, Enum.map(args, &to_charlist/1)},
+         {:cd, to_charlist(config[:workspace])},
+         {:env, environment(config[:env] || %{})}
+       ])}
+    else
+      {:error, {:workspace_not_found, config[:workspace]}}
+    end
+  end
+
+  defp environment(env),
+    do: Enum.map(env, fn {key, value} -> {to_charlist(key), to_charlist(value)} end)
 end

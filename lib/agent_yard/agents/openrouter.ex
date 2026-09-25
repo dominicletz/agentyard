@@ -36,9 +36,16 @@ defmodule AgentYard.Agents.OpenRouter do
   def normalize(_payload), do: :ignore
 
   defp request(config, callback) do
-    url = config[:base_url] || "https://openrouter.ai/api/v1/chat/completions"
+    url = endpoint_url(config[:base_url])
 
-    case config[:api_key] || System.get_env("OPENROUTER_API_KEY") do
+    api_key =
+      config[:api_key] ||
+        get_in(config, [:env, "OPENROUTER_API_KEY"]) ||
+        get_in(config, [:env, "OPENAI_API_KEY"]) ||
+        System.get_env("OPENROUTER_API_KEY") ||
+        System.get_env("OPENAI_API_KEY")
+
+    case api_key do
       nil -> fail(callback, "OPENROUTER_API_KEY is not configured")
       key -> request_with_key(config, callback, url, key)
     end
@@ -48,7 +55,7 @@ defmodule AgentYard.Agents.OpenRouter do
     body =
       Jason.encode!(%{
         model: config[:model] || "openai/gpt-4o-mini",
-        messages: [%{role: "user", content: config[:prompt] || ""}],
+        messages: messages(config),
         stream: false
       })
 
@@ -85,5 +92,25 @@ defmodule AgentYard.Agents.OpenRouter do
   defp fail(callback, message) do
     callback.(Event.error(message))
     callback.(Event.done())
+  end
+
+  defp messages(config) do
+    system =
+      [config[:instructions], config[:permission_mode]]
+      |> Enum.reject(&is_nil/1)
+      |> Enum.join("\n")
+
+    messages = if system == "", do: [], else: [%{role: "system", content: system}]
+    messages ++ [%{role: "user", content: config[:prompt] || ""}]
+  end
+
+  defp endpoint_url(nil), do: "https://openrouter.ai/api/v1/chat/completions"
+
+  defp endpoint_url(base_url) do
+    base_url = String.trim_trailing(base_url, "/")
+
+    if String.ends_with?(base_url, "/chat/completions"),
+      do: base_url,
+      else: base_url <> "/chat/completions"
   end
 end

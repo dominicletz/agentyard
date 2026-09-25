@@ -1,10 +1,21 @@
 defmodule AgentYard.Agents.Event do
   @moduledoc "The provider-neutral event vocabulary stored in a run timeline."
 
-  @types ~w(status assistant_delta tool_call tool_result usage result error done)
+  @types ~w(status assistant_delta tool_call tool_result usage result error done workspace_diff)
 
   @enforce_keys [:type]
-  defstruct [:type, :text, :tool, :input, :output, :usage, :cost_usd, :message, :raw]
+  defstruct [
+    :type,
+    :text,
+    :tool,
+    :input,
+    :output,
+    :usage,
+    :cost_usd,
+    :message,
+    :diff,
+    :raw
+  ]
 
   @type t :: %__MODULE__{
           type: String.t(),
@@ -15,6 +26,7 @@ defmodule AgentYard.Agents.Event do
           usage: map() | nil,
           cost_usd: number() | nil,
           message: String.t() | nil,
+          diff: String.t() | nil,
           raw: map() | nil
         }
 
@@ -27,7 +39,26 @@ defmodule AgentYard.Agents.Event do
   def usage(usage), do: %__MODULE__{type: "usage", usage: usage}
   def result(message), do: %__MODULE__{type: "result", message: message}
   def error(message), do: %__MODULE__{type: "error", message: message}
+  def workspace_diff(diff), do: %__MODULE__{type: "workspace_diff", diff: diff}
   def done, do: %__MODULE__{type: "done"}
+
+  @doc """
+  Replaces secret values anywhere in an event before it is broadcast or stored.
+
+  Secret values are treated as opaque binaries so values containing punctuation
+  or regular-expression characters cannot break redaction.
+  """
+  def mask(%__MODULE__{} = event, secrets) when is_map(secrets) do
+    values =
+      secrets
+      |> Map.values()
+      |> Enum.filter(&(is_binary(&1) and byte_size(&1) > 0))
+
+    event
+    |> Map.from_struct()
+    |> mask_term(values)
+    |> then(&struct(__MODULE__, &1))
+  end
 
   def to_payload(%__MODULE__{} = event) do
     event
@@ -55,6 +86,7 @@ defmodule AgentYard.Agents.Event do
       "usage" => :usage,
       "cost_usd" => :cost_usd,
       "message" => :message,
+      "diff" => :diff,
       "raw" => :raw
     }
 
@@ -67,4 +99,24 @@ defmodule AgentYard.Agents.Event do
   defp mask_raw(nil), do: nil
   defp mask_raw(raw) when is_map(raw), do: Map.drop(raw, ["env", :env, "secret", :secret])
   defp mask_raw(raw), do: raw
+
+  defp mask_term(value, []), do: value
+
+  defp mask_term(value, secrets) when is_binary(value) do
+    Enum.reduce(secrets, value, fn secret, value ->
+      :binary.replace(value, secret, "[REDACTED]", [:global])
+    end)
+  end
+
+  defp mask_term(value, secrets) when is_map(value) do
+    Map.new(value, fn {key, nested} -> {key, mask_term(nested, secrets)} end)
+  end
+
+  defp mask_term(value, secrets) when is_list(value),
+    do: Enum.map(value, &mask_term(&1, secrets))
+
+  defp mask_term(value, secrets) when is_tuple(value),
+    do: value |> Tuple.to_list() |> Enum.map(&mask_term(&1, secrets)) |> List.to_tuple()
+
+  defp mask_term(value, _secrets), do: value
 end

@@ -16,6 +16,27 @@ defmodule AgentYard.Repositories do
     Repo.get_by!(Repository, id: id, team_id: team_id)
   end
 
+  def find_for_webhook(repository_payload) when is_map(repository_payload) do
+    full_name =
+      repository_payload["full_name"] || repository_payload["path_with_namespace"]
+
+    clone_url =
+      repository_payload["clone_url"] ||
+        repository_payload["git_http_url"] ||
+        repository_payload["http_url_to_repo"]
+
+    html_url = repository_payload["html_url"] || repository_payload["web_url"]
+
+    from(r in Repository,
+      where:
+        r.name == ^full_name or
+          r.remote_url == ^clone_url or
+          r.remote_url == ^html_url,
+      limit: 1
+    )
+    |> Repo.one()
+  end
+
   def create(team_id, attrs) do
     %Repository{}
     |> Repository.changeset(Map.put(attrs, :team_id, team_id))

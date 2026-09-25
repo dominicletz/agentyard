@@ -1,9 +1,28 @@
+defmodule AgentYard.RunsLifecycleTest.RetrySandbox do
+  def prepare(config) do
+    counter = Application.fetch_env!(:agentyard, :provision_retry_counter)
+    attempt = Agent.get_and_update(counter, fn value -> {value + 1, value + 1} end)
+
+    if attempt == 1 do
+      {:error, :transient_sandbox_failure}
+    else
+      {:ok, Map.put(config, :sandbox, :local)}
+    end
+  end
+
+  def cleanup(_config), do: :ok
+end
+
 defmodule AgentYard.RunsLifecycleTest do
   use ExUnit.Case, async: false
 
+  import Ecto.Query
+
+  alias AgentYard.Audit.Event, as: AuditEvent
   alias AgentYard.Repo
   alias AgentYard.Runs
   alias AgentYard.Runs.{RunEvent, Session}
+  alias AgentYard.Secrets
   alias AgentYard.TestFactory
 
   setup do
@@ -25,7 +44,8 @@ defmodule AgentYard.RunsLifecycleTest do
           prompt: "Exercise the fake lifecycle"
         })
 
-      assert {:ok, _pid} = Runs.start_run(run)
+      assert {:ok, %{args: %{"run_id" => run_id}}} = Runs.start_run(run)
+      assert run_id == run.id
 
       assert TestFactory.eventually(fn ->
                Repo.get!(AgentYard.Runs.Run, run.id).status == "succeeded"
@@ -42,6 +62,186 @@ defmodule AgentYard.RunsLifecycleTest do
       assert Enum.any?(events, &(&1.kind == "done"))
       assert Enum.all?(events, &match?(%RunEvent{}, &1))
       assert Repo.get!(Session, run.session_id).status == "active"
+      assert Repo.exists?(from(audit in AuditEvent, where: audit.subject_id == ^run.id))
     end
   end
+
+  test "injects scoped secrets and masks them in the event timeline", context do
+    if context[:database] == false do
+      assert true
+    else
+      {:ok, _team_secret} =
+        Secrets.put(context.team.id, %{name: "TEAM_TOKEN", value: "team-secret"})
+
+      {:ok, _repository_secret} =
+        Secrets.put(context.team.id, %{
+          name: "REPOSITORY_TOKEN",
+          value: "repository-secret",
+          scope: "repository",
+          repository_id: context.repository.id
+        })
+
+      {:ok, run} =
+        Runs.create_run(context.user, context.team, %{
+          repository_id: context.repository.id,
+          agent_profile_id: context.profile.id,
+          prompt: "Use repository-secret while fixing the task"
+        })
+
+      assert {:ok, _job} = Runs.start_run(run)
+
+      assert TestFactory.eventually(fn ->
+               Repo.get!(AgentYard.Runs.Run, run.id).status == "succeeded"
+             end)
+
+      events = Runs.list_events(Repo.get!(AgentYard.Runs.Run, run.id))
+
+      assert Enum.any?(
+               events,
+               &(&1.payload["message"] == "Scoped secrets injected into adapter environment")
+             )
+
+      serialized = Enum.map_join(events, "\n", &inspect(&1.payload))
+      refute serialized =~ "repository-secret"
+      refute serialized =~ "team-secret"
+      assert serialized =~ "[REDACTED]"
+    end
+  end
+
+  test "stops a run when its reported cost exceeds the profile budget", context do
+    if context[:database] == false do
+      assert true
+    else
+      profile =
+        TestFactory.profile_fixture(context.team, %{
+          name: "Tiny budget fake",
+          budget_usd: Decimal.new("0.01")
+        })
+
+      {:ok, run} =
+        Runs.create_run(context.user, context.team, %{
+          repository_id: context.repository.id,
+          agent_profile_id: profile.id,
+          prompt: "Exceed the tiny budget"
+        })
+
+      assert {:ok, _job} = Runs.start_run(run)
+
+      assert TestFactory.eventually(fn ->
+               Repo.get!(AgentYard.Runs.Run, run.id).status == "failed"
+             end)
+
+      events = Runs.list_events(Repo.get!(AgentYard.Runs.Run, run.id))
+
+      assert Enum.any?(events, fn event ->
+               is_binary(event.payload["message"]) and
+                 event.payload["message"] =~ "budget exceeded"
+             end)
+    end
+  end
+
+  test "stops a run after its maximum tool turns", context do
+    if context[:database] == false do
+      assert true
+    else
+      {:ok, run} =
+        Runs.create_run(context.user, context.team, %{
+          repository_id: context.repository.id,
+          agent_profile_id: context.profile.id,
+          prompt: "Stop after one turn",
+          max_turns: 1
+        })
+
+      assert {:ok, _job} = Runs.start_run(run)
+
+      assert TestFactory.eventually(fn ->
+               Repo.get!(AgentYard.Runs.Run, run.id).status == "failed"
+             end)
+
+      events = Runs.list_events(Repo.get!(AgentYard.Runs.Run, run.id))
+
+      assert Enum.any?(events, fn event ->
+               is_binary(event.payload["message"]) and event.payload["message"] =~ "maximum turns"
+             end)
+    end
+  end
+
+  test "allows a run whose reported cost is exactly its budget", context do
+    if context[:database] == false do
+      assert true
+    else
+      profile =
+        TestFactory.profile_fixture(context.team, %{
+          name: "Exact budget fake",
+          budget_usd: Decimal.new("0.04")
+        })
+
+      {:ok, run} =
+        Runs.create_run(context.user, context.team, %{
+          repository_id: context.repository.id,
+          agent_profile_id: profile.id,
+          prompt: "Stay exactly within budget"
+        })
+
+      assert {:ok, _job} = Runs.start_run(run)
+
+      assert TestFactory.eventually(fn ->
+               Repo.get!(AgentYard.Runs.Run, run.id).status == "succeeded"
+             end)
+
+      assert Decimal.equal?(Repo.get!(AgentYard.Runs.Run, run.id).cost_usd, Decimal.new("0.04"))
+    end
+  end
+
+  test "retries transient provisioning before starting the adapter", context do
+    if context[:database] == false do
+      assert true
+    else
+      previous_module = Application.get_env(:agentyard, :sandbox_module)
+      previous_delay = Application.get_env(:agentyard, :provision_retry_delay_ms)
+      {:ok, counter} = Agent.start_link(fn -> 0 end)
+
+      Application.put_env(
+        :agentyard,
+        :sandbox_module,
+        AgentYard.RunsLifecycleTest.RetrySandbox
+      )
+
+      Application.put_env(:agentyard, :provision_retry_counter, counter)
+      Application.put_env(:agentyard, :provision_retry_delay_ms, 0)
+
+      on_exit(fn ->
+        restore_application_env(:sandbox_module, previous_module)
+        restore_application_env(:provision_retry_delay_ms, previous_delay)
+        Application.delete_env(:agentyard, :provision_retry_counter)
+        if Process.alive?(counter), do: Agent.stop(counter)
+      end)
+
+      {:ok, run} =
+        Runs.create_run(context.user, context.team, %{
+          repository_id: context.repository.id,
+          agent_profile_id: context.profile.id,
+          prompt: "Retry setup without replaying agent turns"
+        })
+
+      assert {:ok, _job} = Runs.start_run(run)
+
+      assert TestFactory.eventually(fn ->
+               Repo.get!(AgentYard.Runs.Run, run.id).status == "succeeded"
+             end)
+
+      events = Runs.list_events(Repo.get!(AgentYard.Runs.Run, run.id))
+
+      assert Enum.count(events, &(&1.kind == "assistant_delta")) == 2
+
+      assert Enum.any?(events, fn event ->
+               event.kind == "status" and event.payload["message"] =~ "retrying"
+             end)
+
+      assert Agent.get(counter, & &1) == 2
+    end
+  end
+
+  defp restore_application_env(key, nil), do: Application.delete_env(:agentyard, key)
+  defp restore_application_env(key, value), do: Application.put_env(:agentyard, key, value)
 end

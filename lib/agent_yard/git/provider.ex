@@ -13,4 +13,5 @@ defmodule AgentYard.Git.Provider do
               :ok | {:error, term()}
   @callback open_change(config(), String.t(), String.t(), String.t()) ::
               {:ok, map()} | {:error, term()}
+  @callback post_comment(config(), String.t(), String.t()) :: :ok | {:error, term()}
 end

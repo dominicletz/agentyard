@@ -1,7 +1,7 @@
 defmodule AgentYardWeb.RepositoriesLive.Index do
   use AgentYardWeb, :live_view
 
-  alias AgentYard.Repositories
+  alias AgentYard.{Accounts, Repositories}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -16,9 +16,15 @@ defmodule AgentYardWeb.RepositoriesLive.Index do
 
   @impl true
   def handle_event("connect", params, socket) do
-    case Repositories.create(socket.assigns.team.id, params) do
-      {:ok, _repository} -> {:noreply, assign(socket, repositories: repositories(socket))}
-      {:error, changeset} -> {:noreply, assign(socket, error: inspect(changeset.errors))}
+    case Accounts.authorize(socket.assigns.current_user, socket.assigns.team, ~w(owner admin)) do
+      :ok ->
+        case Repositories.create(socket.assigns.team.id, params) do
+          {:ok, _repository} -> {:noreply, assign(socket, repositories: repositories(socket))}
+          {:error, changeset} -> {:noreply, assign(socket, error: inspect(changeset.errors))}
+        end
+
+      {:error, :forbidden} ->
+        {:noreply, assign(socket, error: "Only owners and admins can connect repositories.")}
     end
   end
 

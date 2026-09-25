@@ -13,12 +13,25 @@ defmodule AgentYard.Git.Command do
   def clone(remote_url, ref, workspace, env \\ []) do
     with :ok <- File.mkdir_p(Path.dirname(workspace)),
          {:ok, _} <-
-           run(["clone", "--branch", ref, "--single-branch", remote_url, workspace], env: env) do
+           run(["clone", remote_url, workspace], env: env),
+         {:ok, _} <- run(["-C", workspace, "checkout", ref], env: env) do
       {:ok, workspace}
     end
   end
 
-  def branch(workspace, branch), do: run(["-C", workspace, "switch", "-c", branch])
+  def branch(workspace, branch) do
+    case run(["-C", workspace, "switch", "-c", branch]) do
+      {:ok, _output} = result ->
+        result
+
+      {:error, {:git_failed, _, message}} = error ->
+        if String.contains?(message, "already exists") do
+          run(["-C", workspace, "switch", branch])
+        else
+          error
+        end
+    end
+  end
 
   def commit_push(workspace, branch, message) do
     with {:ok, _} <- run(["-C", workspace, "add", "--all"]),
