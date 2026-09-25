@@ -95,6 +95,7 @@ defmodule AgentYardWeb.WebhookController do
   end
 
   defp run_request("github", _event_name, _params), do: :ignore
+  defp run_request("gitlab", _event_name, params), do: gitlab_request(params)
 
   defp github_issue_comment(params) do
     repository = params["repository"] || %{}
@@ -145,7 +146,7 @@ defmodule AgentYardWeb.WebhookController do
     end
   end
 
-  defp run_request("gitlab", _event_name, params) do
+  defp gitlab_request(params) do
     project = params["project"] || %{}
     user = params["user"] || %{}
     attributes = params["object_attributes"] || %{}
