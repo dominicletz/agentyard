@@ -1,22 +1,42 @@
 import Config
 
 database_url =
-  System.get_env("DATABASE_URL") ||
-    "ecto://#{System.get_env("POSTGRES_USER", "postgres")}:#{System.get_env("POSTGRES_PASSWORD", "postgres")}@#{System.get_env("POSTGRES_HOST", "db")}/#{System.get_env("POSTGRES_DB", "agentyard")}"
+  case System.get_env("DATABASE_URL") do
+    nil ->
+      username = URI.encode_www_form(System.get_env("POSTGRES_USER", "postgres"))
+      password = URI.encode_www_form(System.get_env("POSTGRES_PASSWORD", "postgres"))
+      host = System.get_env("POSTGRES_HOST", "db")
+      port = System.get_env("POSTGRES_PORT", "5432")
+      database = System.get_env("POSTGRES_DB", "agentyard")
+
+      "ecto://#{username}:#{password}@#{host}:#{port}/#{database}"
+
+    database_url ->
+      database_url
+  end
 
 if config_env() == :prod do
-  secret_key_base =
-    System.get_env("SECRET_KEY_BASE") ||
-      raise "SECRET_KEY_BASE is required in production"
+  secret_key_base = System.fetch_env!("SECRET_KEY_BASE")
+  secret_key = System.fetch_env!("AGENTYARD_SECRET_KEY")
+  host = System.get_env("PHX_HOST", "localhost")
+  port = String.to_integer(System.get_env("PORT", "4000"))
+  scheme = System.get_env("PHX_SCHEME", "https")
+
+  url_port =
+    System.get_env(
+      "PHX_URL_PORT",
+      if(scheme == "https", do: "443", else: Integer.to_string(port))
+    )
+    |> String.to_integer()
 
   config :agentyard, AgentYardWeb.Endpoint,
-    url: [host: System.get_env("PHX_HOST", "localhost"), port: 443, scheme: "https"],
+    url: [host: host, port: url_port, scheme: scheme],
     http: [
       ip: {0, 0, 0, 0},
-      port: String.to_integer(System.get_env("PORT", "4000"))
+      port: port
     ],
     secret_key_base: secret_key_base,
-    server: true
+    server: System.get_env("PHX_SERVER", "true") == "true"
 
   config :agentyard, AgentYard.Repo,
     url: database_url,
@@ -24,7 +44,7 @@ if config_env() == :prod do
     ssl: System.get_env("DATABASE_SSL", "false") == "true"
 
   config :agentyard,
-    secret_key: System.get_env("AGENTYARD_SECRET_KEY") || secret_key_base,
+    secret_key: secret_key,
     demo_mode: System.get_env("DEMO_MODE", "false") == "true"
 
   smtp_relay =

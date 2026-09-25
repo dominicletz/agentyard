@@ -1,0 +1,4 @@
+# Set DOMAIN in .env and start the optional caddy profile.
+{$DOMAIN} {
+    reverse_proxy app:4000
+}

@@ -28,3 +28,8 @@ agentyard-*.tar
 # Local toolchains used by contributors and CI agents.
 .toolchain/
 assets/node_modules/
+
+# Local and production environment files may contain secrets.
+.env
+.env.*
+!.env*.example
