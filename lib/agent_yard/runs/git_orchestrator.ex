@@ -74,6 +74,7 @@ defmodule AgentYard.Runs.GitOrchestrator do
          workspace
        ) do
     with {:ok, _} <- Command.run(["init", "-b", forge_config.base_branch, workspace]),
+         {:ok, _} <- configure_identity(workspace),
          {:ok, _} <-
            Command.run(["-C", workspace, "commit", "--allow-empty", "-m", "AgentYard workspace"]) do
       {:ok, [Event.status("Fake adapter: using an isolated local workspace (clone skipped)")]}
