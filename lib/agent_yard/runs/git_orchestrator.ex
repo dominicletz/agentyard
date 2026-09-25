@@ -53,29 +53,7 @@ defmodule AgentYard.Runs.GitOrchestrator do
 
   def finalize(%Run{} = run, config) do
     with {:ok, status} <- Command.run(["-C", config.workspace, "status", "--porcelain"]) do
-      if String.trim(status) == "" do
-        {:ok, nil, [Event.status("No workspace changes; skipped PR/MR creation")]}
-      else
-        title = run.session.title || "AgentYard run"
-        body = result_body(run)
-
-        with :ok <-
-               config.git_provider.commit_and_push(
-                 config.forge_config,
-                 config.workspace,
-                 run.branch_name,
-                 title
-               ),
-             {:ok, change} <-
-               config.git_provider.open_change(
-                 config.forge_config,
-                 run.branch_name,
-                 title,
-                 body
-               ) do
-          {:ok, change, [Event.status("Opened #{change_label(run.session.repository.forge)}")]}
-        end
-      end
+      publish_changes(run, config, status)
     end
   end
 
@@ -141,11 +119,46 @@ defmodule AgentYard.Runs.GitOrchestrator do
   defp token_for(_forge, env), do: env_value(env, @github_token_keys)
 
   defp env_value(env, keys) do
-    Enum.find_value(keys, fn key ->
-      Enum.find_value(env, fn {name, value} ->
-        if String.upcase(to_string(name)) == key and is_binary(value), do: value
-      end)
+    Enum.find_value(keys, &find_env_value(env, &1))
+  end
+
+  defp find_env_value(env, key) do
+    Enum.find_value(env, fn {name, value} ->
+      if String.upcase(to_string(name)) == key and is_binary(value), do: value
     end)
+  end
+
+  defp publish_changes(_run, _config, status) when status in ["", nil],
+    do: {:ok, nil, [Event.status("No workspace changes; skipped PR/MR creation")]}
+
+  defp publish_changes(run, config, status) do
+    if String.trim(status) == "" do
+      {:ok, nil, [Event.status("No workspace changes; skipped PR/MR creation")]}
+    else
+      publish_change(run, config)
+    end
+  end
+
+  defp publish_change(run, config) do
+    title = run.session.title || "AgentYard run"
+    body = result_body(run)
+
+    with :ok <-
+           config.git_provider.commit_and_push(
+             config.forge_config,
+             config.workspace,
+             run.branch_name,
+             title
+           ),
+         {:ok, change} <-
+           config.git_provider.open_change(
+             config.forge_config,
+             run.branch_name,
+             title,
+             body
+           ) do
+      {:ok, change, [Event.status("Opened #{change_label(run.session.repository.forge)}")]}
+    end
   end
 
   defp workspace_path(run, config) do

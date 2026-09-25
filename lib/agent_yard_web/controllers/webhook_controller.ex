@@ -47,11 +47,12 @@ defmodule AgentYardWeb.WebhookController do
         |> json(%{error: reason})
 
       {:ok, attrs} ->
-        with {:ok, run} <- create_webhook_run(attrs) do
-          conn
-          |> put_status(:accepted)
-          |> json(%{data: %{run_id: run.id, status: run.status}})
-        else
+        case create_webhook_run(attrs) do
+          {:ok, run} ->
+            conn
+            |> put_status(:accepted)
+            |> json(%{data: %{run_id: run.id, status: run.status}})
+
           {:error, reason} ->
             conn
             |> put_status(:unprocessable_entity)
@@ -86,55 +87,61 @@ defmodule AgentYardWeb.WebhookController do
     end
   end
 
-  defp run_request("github", event_name, params) do
+  defp run_request("github", "issue_comment", params), do: github_issue_comment(params)
+
+  defp run_request("github", event_name, params)
+       when event_name in ["issues", "pull_request"] do
+    github_label(params)
+  end
+
+  defp run_request("github", _event_name, _params), do: :ignore
+
+  defp github_issue_comment(params) do
     repository = params["repository"] || %{}
     sender = params["sender"] || %{}
 
-    cond do
-      event_name == "issue_comment" ->
-        comment = get_in(params, ["comment", "body"]) || ""
-        issue = params["issue"] || %{}
+    comment = get_in(params, ["comment", "body"]) || ""
+    issue = params["issue"] || %{}
 
-        with :ok <- permitted?(sender, repository),
-             :ok <- reject_fork(issue),
-             true <- mention?(comment) do
-          {:ok,
-           %{
-             repository: repository,
-             prompt: strip_mention(comment),
-             trigger: "github_mention",
-             issue_url: issue["html_url"],
-             base_branch: get_in(issue, ["pull_request", "base", "ref"]),
-             branch_name: get_in(issue, ["pull_request", "head", "ref"]),
-             auto_pr: is_nil(issue["pull_request"])
-           }}
-        else
-          false -> :ignore
-          {:error, reason} -> {:error, reason}
-        end
+    with :ok <- permitted?(sender, repository),
+         :ok <- reject_fork(issue),
+         true <- mention?(comment) do
+      {:ok,
+       %{
+         repository: repository,
+         prompt: strip_mention(comment),
+         trigger: "github_mention",
+         issue_url: issue["html_url"],
+         base_branch: get_in(issue, ["pull_request", "base", "ref"]),
+         branch_name: get_in(issue, ["pull_request", "head", "ref"]),
+         auto_pr: is_nil(issue["pull_request"])
+       }}
+    else
+      false -> :ignore
+      {:error, reason} -> {:error, reason}
+    end
+  end
 
-      event_name in ["issues", "pull_request"] and params["action"] == "labeled" ->
-        label = get_in(params, ["label", "name"]) || ""
+  defp github_label(params) do
+    repository = params["repository"] || %{}
+    sender = params["sender"] || %{}
+    label = get_in(params, ["label", "name"]) || ""
 
-        with :ok <- permitted?(sender, repository),
-             true <- label in @labels do
-          {:ok,
-           %{
-             repository: repository,
-             prompt: "Address the issue associated with the #{label} label.",
-             trigger: "github_label",
-             issue_url: get_in(params, ["issue", "html_url"]) || params["html_url"],
-             base_branch: get_in(params, ["pull_request", "base", "ref"]),
-             branch_name: get_in(params, ["pull_request", "head", "ref"]),
-             auto_pr: is_nil(params["pull_request"])
-           }}
-        else
-          false -> :ignore
-          {:error, reason} -> {:error, reason}
-        end
-
-      true ->
-        :ignore
+    with :ok <- permitted?(sender, repository),
+         true <- params["action"] == "labeled" and label in @labels do
+      {:ok,
+       %{
+         repository: repository,
+         prompt: "Address the issue associated with the #{label} label.",
+         trigger: "github_label",
+         issue_url: get_in(params, ["issue", "html_url"]) || params["html_url"],
+         base_branch: get_in(params, ["pull_request", "base", "ref"]),
+         branch_name: get_in(params, ["pull_request", "head", "ref"]),
+         auto_pr: is_nil(params["pull_request"])
+       }}
+    else
+      false -> :ignore
+      {:error, reason} -> {:error, reason}
     end
   end
 

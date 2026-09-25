@@ -71,28 +71,33 @@ defmodule AgentYard.Runs.RunProcess do
           Event.status("Starting #{sandbox_name(sandbox)} sandbox") | setup_events
         ])
 
-      case state.adapter.prepare(prepared) do
-        {:ok, adapter_config} ->
-          case state.adapter.start(adapter_config, fn event ->
-                 send(owner, {:adapter_event, event})
-               end) do
-            {:ok, adapter_state} ->
-              {:noreply,
-               %{
-                 state
-                 | adapter_state: adapter_state,
-                   run_config: adapter_config,
-                   timeout_ref: schedule_timeout(state.run.timeout_seconds)
-               }}
-
-            {:error, reason} ->
-              stop_failed(state, reason)
-          end
-
-        {:error, reason} ->
-          stop_failed(state, reason)
-      end
+      start_adapter(state, prepared, owner)
     else
+      {:error, reason} ->
+        stop_failed(state, reason)
+    end
+  end
+
+  defp start_adapter(state, prepared, owner) do
+    case state.adapter.prepare(prepared) do
+      {:ok, adapter_config} -> start_prepared_adapter(state, adapter_config, owner)
+      {:error, reason} -> stop_failed(state, reason)
+    end
+  end
+
+  defp start_prepared_adapter(state, adapter_config, owner) do
+    callback = fn event -> send(owner, {:adapter_event, event}) end
+
+    case state.adapter.start(adapter_config, callback) do
+      {:ok, adapter_state} ->
+        {:noreply,
+         %{
+           state
+           | adapter_state: adapter_state,
+             run_config: adapter_config,
+             timeout_ref: schedule_timeout(state.run.timeout_seconds)
+         }}
+
       {:error, reason} ->
         stop_failed(state, reason)
     end

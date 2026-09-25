@@ -128,22 +128,28 @@ defmodule AgentYard.Runs do
   def start_live_run(run_id) do
     case get_run(run_id) do
       %Run{status: "queued"} = run ->
-        if concurrency_available?(run) do
-          child = {RunProcess, run_id}
-
-          case DynamicSupervisor.start_child(AgentYard.Runs.Supervisor, child) do
-            {:error, {:already_started, pid}} -> {:ok, pid}
-            result -> result
-          end
-        else
-          {:error, :concurrency_limit}
-        end
+        start_queued_run(run)
 
       %Run{status: status} when status in ["running", "succeeded", "failed", "cancelled"] ->
         {:error, {:invalid_run_status, status}}
 
       nil ->
         {:error, :run_not_found}
+    end
+  end
+
+  defp start_queued_run(run) do
+    if concurrency_available?(run),
+      do: start_run_process(run.id),
+      else: {:error, :concurrency_limit}
+  end
+
+  defp start_run_process(run_id) do
+    child = {RunProcess, run_id}
+
+    case DynamicSupervisor.start_child(AgentYard.Runs.Supervisor, child) do
+      {:error, {:already_started, pid}} -> {:ok, pid}
+      result -> result
     end
   end
 
