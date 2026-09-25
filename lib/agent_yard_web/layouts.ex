@@ -12,8 +12,7 @@ defmodule AgentYardWeb.Layouts do
     |> hd()
     |> String.split(~r/[^a-zA-Z0-9]+/, trim: true)
     |> Enum.take(2)
-    |> Enum.map(&String.first/1)
-    |> Enum.join()
+    |> Enum.map_join("", &String.first/1)
     |> String.upcase()
   end
 end

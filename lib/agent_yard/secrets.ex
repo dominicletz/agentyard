@@ -1,8 +1,12 @@
 defmodule AgentYard.Secrets do
+  @moduledoc """
+  Context for encrypted team and repository secrets.
+  """
+
   import Ecto.Query, warn: false
   alias AgentYard.Repo
-  alias AgentYard.Security.SecretBox
   alias AgentYard.Secrets.Secret
+  alias AgentYard.Security.SecretBox
 
   def put(team_id, attrs) do
     value = Map.fetch!(attrs, :value)

@@ -1,4 +1,8 @@
 defmodule AgentYardWeb.CoreComponents do
+  @moduledoc """
+  Shared UI components used by AgentYard LiveViews and layouts.
+  """
+
   use Phoenix.Component
 
   attr(:flash, :map, required: true)

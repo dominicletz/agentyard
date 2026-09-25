@@ -1,4 +1,8 @@
 defmodule AgentYardWeb.ApiAuth do
+  @moduledoc """
+  Plug that authenticates API requests with personal bearer tokens.
+  """
+
   import Plug.Conn
   alias AgentYard.Accounts
 

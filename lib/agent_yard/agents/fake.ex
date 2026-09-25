@@ -1,4 +1,8 @@
 defmodule AgentYard.Agents.Fake do
+  @moduledoc """
+  Scripted adapter used for local demos and deterministic tests.
+  """
+
   @behaviour AgentYard.Agents.Adapter
 
   alias AgentYard.Agents.{Event, StreamParser}

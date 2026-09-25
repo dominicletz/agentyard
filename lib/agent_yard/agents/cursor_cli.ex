@@ -1,4 +1,8 @@
 defmodule AgentYard.Agents.CursorCLI do
+  @moduledoc """
+  Cursor CLI adapter supporting both current executable names.
+  """
+
   @behaviour AgentYard.Agents.Adapter
 
   alias AgentYard.Agents.{CLI, StreamParser}

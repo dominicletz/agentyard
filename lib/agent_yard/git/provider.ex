@@ -1,4 +1,8 @@
 defmodule AgentYard.Git.Provider do
+  @moduledoc """
+  Behaviour for forge integrations that manage repository changes.
+  """
+
   @type config :: map()
 
   @callback clone(config(), String.t(), String.t(), String.t()) ::

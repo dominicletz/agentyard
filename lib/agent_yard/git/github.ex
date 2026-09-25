@@ -1,4 +1,8 @@
 defmodule AgentYard.Git.GitHub do
+  @moduledoc """
+  GitHub provider for authenticated repository and pull request operations.
+  """
+
   @behaviour AgentYard.Git.Provider
 
   alias AgentYard.Git.{Command, ForgeHTTP}

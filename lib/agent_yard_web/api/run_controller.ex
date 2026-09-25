@@ -70,11 +70,13 @@ defmodule AgentYardWeb.Api.RunController do
       |> put_resp_header("cache-control", "no-cache")
       |> send_chunked(200)
 
-    with {:ok, conn} <- send_events(conn, Runs.list_events(run, last_event_id)) do
-      Phoenix.PubSub.subscribe(AgentYard.PubSub, Runs.topic(run.id))
-      stream_loop(conn, run.id)
-    else
-      {:error, :closed} -> conn
+    case send_events(conn, Runs.list_events(run, last_event_id)) do
+      {:ok, conn} ->
+        Phoenix.PubSub.subscribe(AgentYard.PubSub, Runs.topic(run.id))
+        stream_loop(conn, run.id)
+
+      {:error, :closed} ->
+        conn
     end
   end
 

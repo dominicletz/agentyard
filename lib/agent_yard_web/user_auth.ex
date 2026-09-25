@@ -1,4 +1,8 @@
 defmodule AgentYardWeb.UserAuth do
+  @moduledoc """
+  Browser and LiveView authentication helpers for the current user.
+  """
+
   import Plug.Conn
 
   alias AgentYard.Accounts

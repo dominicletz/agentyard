@@ -1,4 +1,8 @@
 defmodule AgentYard.Git.GitLab do
+  @moduledoc """
+  GitLab provider for authenticated repository and merge request operations.
+  """
+
   @behaviour AgentYard.Git.Provider
 
   alias AgentYard.Git.{Command, ForgeHTTP}

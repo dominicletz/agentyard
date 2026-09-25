@@ -1,4 +1,8 @@
 defmodule AgentYard.Runs.RunProcess do
+  @moduledoc """
+  Per-run OTP process that connects adapters to persisted events.
+  """
+
   use GenServer
 
   alias AgentYard.Agents.Event

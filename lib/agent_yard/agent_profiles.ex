@@ -1,4 +1,8 @@
 defmodule AgentYard.AgentProfiles do
+  @moduledoc """
+  Context for team-scoped agent profile configuration.
+  """
+
   import Ecto.Query, warn: false
   alias AgentYard.AgentProfiles.Profile
   alias AgentYard.Repo

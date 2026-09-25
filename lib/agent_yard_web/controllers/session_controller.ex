@@ -106,7 +106,6 @@ defmodule AgentYardWeb.SessionController do
 
   defp format_errors(changeset) do
     changeset.errors
-    |> Enum.map(fn {field, {message, _}} -> "#{field} #{message}" end)
-    |> Enum.join(", ")
+    |> Enum.map_join(", ", fn {field, {message, _}} -> "#{field} #{message}" end)
   end
 end

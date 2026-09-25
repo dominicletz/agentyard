@@ -1,4 +1,8 @@
 defmodule AgentYard.Sandboxes.Local do
+  @moduledoc """
+  Development runner that executes commands on the local host.
+  """
+
   @behaviour AgentYard.Sandboxes.Runner
 
   @impl true

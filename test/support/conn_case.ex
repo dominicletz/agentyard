@@ -1,4 +1,8 @@
 defmodule AgentYardWeb.ConnCase do
+  @moduledoc """
+  Shared connection setup for controller and API tests.
+  """
+
   use ExUnit.CaseTemplate
 
   using do

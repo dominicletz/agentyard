@@ -1,4 +1,8 @@
 defmodule AgentYard.Agents.OpenRouter do
+  @moduledoc """
+  Adapter for OpenAI-compatible chat completion endpoints.
+  """
+
   @behaviour AgentYard.Agents.Adapter
 
   alias AgentYard.Agents.Event
@@ -33,46 +37,51 @@ defmodule AgentYard.Agents.OpenRouter do
 
   defp request(config, callback) do
     url = config[:base_url] || "https://openrouter.ai/api/v1/chat/completions"
-    key = config[:api_key] || System.get_env("OPENROUTER_API_KEY")
 
-    if is_nil(key) do
-      callback.(Event.error("OPENROUTER_API_KEY is not configured"))
+    case config[:api_key] || System.get_env("OPENROUTER_API_KEY") do
+      nil -> fail(callback, "OPENROUTER_API_KEY is not configured")
+      key -> request_with_key(config, callback, url, key)
+    end
+  end
+
+  defp request_with_key(config, callback, url, key) do
+    body =
+      Jason.encode!(%{
+        model: config[:model] || "openai/gpt-4o-mini",
+        messages: [%{role: "user", content: config[:prompt] || ""}],
+        stream: false
+      })
+
+    headers = [
+      {~c"authorization", to_charlist("Bearer #{key}")},
+      {~c"content-type", ~c"application/json"}
+    ]
+
+    case :httpc.request(:post, {to_charlist(url), headers, ~c"application/json", body}, [], []) do
+      {:ok, {{_, 200, _}, _headers, response}} ->
+        handle_response(response, callback)
+
+      {:ok, {{_, status, _}, _headers, _response}} ->
+        fail(callback, "OpenRouter returned HTTP #{status}")
+
+      {:error, reason} ->
+        fail(callback, "OpenRouter request failed: #{inspect(reason)}")
+    end
+  end
+
+  defp handle_response(response, callback) do
+    with {:ok, %{"choices" => [choice | _]} = decoded} <- Jason.decode(to_string(response)) do
+      callback.(Event.assistant_delta(get_in(choice, ["message", "content"]) || ""))
+      callback.(Event.usage(decoded["usage"] || %{}))
+      callback.(Event.result("OpenRouter request completed"))
       callback.(Event.done())
     else
-      body =
-        Jason.encode!(%{
-          model: config[:model] || "openai/gpt-4o-mini",
-          messages: [%{role: "user", content: config[:prompt] || ""}],
-          stream: false
-        })
-
-      headers = [
-        {~c"authorization", to_charlist("Bearer #{key}")},
-        {~c"content-type", ~c"application/json"}
-      ]
-
-      case :httpc.request(:post, {to_charlist(url), headers, ~c"application/json", body}, [], []) do
-        {:ok, {{_, 200, _}, _headers, response}} ->
-          with {:ok, decoded} <- Jason.decode(to_string(response)),
-               [choice | _] <- decoded["choices"] || [] do
-            callback.(Event.assistant_delta(get_in(choice, ["message", "content"]) || ""))
-            callback.(Event.usage(decoded["usage"] || %{}))
-            callback.(Event.result("OpenRouter request completed"))
-            callback.(Event.done())
-          else
-            _ ->
-              callback.(Event.error("OpenRouter returned an unexpected response"))
-              callback.(Event.done())
-          end
-
-        {:ok, {{_, status, _}, _headers, _response}} ->
-          callback.(Event.error("OpenRouter returned HTTP #{status}"))
-          callback.(Event.done())
-
-        {:error, reason} ->
-          callback.(Event.error("OpenRouter request failed: #{inspect(reason)}"))
-          callback.(Event.done())
-      end
+      _ -> fail(callback, "OpenRouter returned an unexpected response")
     end
+  end
+
+  defp fail(callback, message) do
+    callback.(Event.error(message))
+    callback.(Event.done())
   end
 end

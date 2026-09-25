@@ -1,4 +1,8 @@
 defmodule AgentYard.Agents.ClaudeCode do
+  @moduledoc """
+  Claude Code CLI adapter using Claude's stream-json output.
+  """
+
   @behaviour AgentYard.Agents.Adapter
 
   alias AgentYard.Agents.{CLI, StreamParser}

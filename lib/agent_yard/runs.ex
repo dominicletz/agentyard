@@ -6,9 +6,9 @@ defmodule AgentYard.Runs do
   import Ecto.Query, warn: false
   alias AgentYard.Accounts.{Team, User}
   alias AgentYard.AgentProfiles.Profile
-  alias AgentYard.Repositories.Repository
   alias AgentYard.Repo
-  alias AgentYard.Runs.{Run, RunEvent, Session}
+  alias AgentYard.Repositories.Repository
+  alias AgentYard.Runs.{Run, RunEvent, RunProcess, Session, Worker}
 
   @topic_prefix "run:"
   @team_topic_prefix "team:"
@@ -81,36 +81,35 @@ defmodule AgentYard.Runs do
   end
 
   def follow_up(%Run{} = run, %User{} = user, prompt) when is_binary(prompt) do
-    with :ok <- authorize_run(run, user),
-         session <- Repo.get!(Session, run.session_id),
-         {:ok, new_run} <-
-           %Run{}
-           |> Run.changeset(%{
-             team_id: run.team_id,
-             user_id: user.id,
-             session_id: session.id,
-             prompt: prompt,
-             trigger: "follow_up",
-             base_branch: run.base_branch,
-             branch_name: run.branch_name,
-             adapter: run.adapter,
-             status: "queued"
-           })
-           |> Repo.insert() do
-      {:ok, new_run}
+    with :ok <- authorize_run(run, user) do
+      session = Repo.get!(Session, run.session_id)
+
+      %Run{}
+      |> Run.changeset(%{
+        team_id: run.team_id,
+        user_id: user.id,
+        session_id: session.id,
+        prompt: prompt,
+        trigger: "follow_up",
+        base_branch: run.base_branch,
+        branch_name: run.branch_name,
+        adapter: run.adapter,
+        status: "queued"
+      })
+      |> Repo.insert()
     end
   end
 
   def enqueue_run(%Run{id: run_id}) do
     run_id
-    |> AgentYard.Runs.Worker.new()
+    |> Worker.new()
     |> Oban.insert()
   end
 
   def start_run(%Run{id: run_id}), do: start_live_run(run_id)
 
   def start_live_run(run_id) do
-    child = {AgentYard.Runs.RunProcess, run_id}
+    child = {RunProcess, run_id}
 
     case DynamicSupervisor.start_child(AgentYard.Runs.Supervisor, child) do
       {:error, {:already_started, pid}} -> {:ok, pid}
@@ -173,9 +172,9 @@ defmodule AgentYard.Runs do
 
   def update_usage(%Run{} = run, usage) do
     update_run(run, %{
-      input_tokens: usage["input_tokens"] || usage[:input_tokens] || run.input_tokens || 0,
-      output_tokens: usage["output_tokens"] || usage[:output_tokens] || run.output_tokens || 0,
-      cache_tokens: usage["cache_tokens"] || usage[:cache_tokens] || run.cache_tokens || 0
+      input_tokens: usage_value(usage, "input_tokens", :input_tokens, run.input_tokens),
+      output_tokens: usage_value(usage, "output_tokens", :output_tokens, run.output_tokens),
+      cache_tokens: usage_value(usage, "cache_tokens", :cache_tokens, run.cache_tokens)
     })
   end
 
@@ -246,6 +245,9 @@ defmodule AgentYard.Runs do
     |> List.first()
     |> String.slice(0, 100)
   end
+
+  defp usage_value(usage, string_key, atom_key, current),
+    do: Map.get(usage, string_key) || Map.get(usage, atom_key) || current || 0
 
   defp unwrap_transaction({:ok, value}), do: value
   defp unwrap_transaction({:error, reason}), do: {:error, reason}

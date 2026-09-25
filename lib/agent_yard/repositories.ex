@@ -1,4 +1,8 @@
 defmodule AgentYard.Repositories do
+  @moduledoc """
+  Context for team-scoped repository connections.
+  """
+
   import Ecto.Query, warn: false
   alias AgentYard.Repo
   alias AgentYard.Repositories.Repository

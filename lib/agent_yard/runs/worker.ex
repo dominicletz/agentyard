@@ -1,4 +1,8 @@
 defmodule AgentYard.Runs.Worker do
+  @moduledoc """
+  Oban entry point for starting queued runs.
+  """
+
   use Oban.Worker, queue: :runs, max_attempts: 3
 
   alias AgentYard.Runs

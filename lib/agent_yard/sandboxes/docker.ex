@@ -1,4 +1,8 @@
 defmodule AgentYard.Sandboxes.Docker do
+  @moduledoc """
+  Local Docker runner with per-run workspace and resource limits.
+  """
+
   @behaviour AgentYard.Sandboxes.Runner
 
   @impl true

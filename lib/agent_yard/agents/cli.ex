@@ -1,7 +1,9 @@
 defmodule AgentYard.Agents.CLI do
-  @moduledoc false
+  @moduledoc """
+  Shared Port runner for command-line agent adapters.
+  """
 
-  alias AgentYard.Agents.StreamParser
+  alias AgentYard.Agents.{Event, StreamParser}
 
   def start(config, callback, provider, executables) do
     executable = Enum.find_value(executables, &System.find_executable/1)
@@ -53,10 +55,10 @@ defmodule AgentYard.Agents.CLI do
         read_port(port, state)
 
       {^port, {:exit_status, 0}} ->
-        state.callback.(AgentYard.Agents.Event.done())
+        state.callback.(Event.done())
 
       {^port, {:exit_status, status}} ->
-        state.callback.(AgentYard.Agents.Event.error("Agent CLI exited with status #{status}"))
+        state.callback.(Event.error("Agent CLI exited with status #{status}"))
     end
   end
 
@@ -64,7 +66,7 @@ defmodule AgentYard.Agents.CLI do
     case StreamParser.parse_line(line, state.provider) do
       {:ok, event} -> state.callback.(event)
       :ignore -> :ok
-      {:error, reason} -> state.callback.(AgentYard.Agents.Event.error(inspect(reason)))
+      {:error, reason} -> state.callback.(Event.error(inspect(reason)))
     end
   end
 

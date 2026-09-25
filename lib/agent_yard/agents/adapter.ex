@@ -1,4 +1,8 @@
 defmodule AgentYard.Agents.Adapter do
+  @moduledoc """
+  Behaviour implemented by agent providers that drive a run.
+  """
+
   alias AgentYard.Agents.Event
 
   @type callback :: (Event.t() -> any())
