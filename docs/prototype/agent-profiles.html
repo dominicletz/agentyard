@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Agent profiles · AgentYard</title>
+<link rel="stylesheet" href="css/app.css"/>
+</head>
+<body class="">
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">AY</div>
+      <div>
+        <div class="brand-name">AgentYard</div>
+        <div class="brand-sub">self-hosted agents</div>
+      </div>
+    </div>
+    <div class="nav-section">Workspace</div>
+    <nav class="nav">
+<a class="" href="index.html"><span class="ico">⌂</span>Home</a>
+<a class="" href="runs.html"><span class="ico">◎</span>Runs</a>
+<a class="" href="new-run.html"><span class="ico">＋</span>New run</a>
+<a class="" href="run-detail.html"><span class="ico">▷</span>Run detail</a>
+<a class="" href="repository.html"><span class="ico">⌘</span>Repository</a>
+<a class="active" href="agent-profiles.html"><span class="ico">✦</span>Agent profiles</a>
+<a class="" href="team-settings.html"><span class="ico">⚙</span>Team settings</a>
+<a class="" href="run-detail-dark.html"><span class="ico">◐</span>Run detail (dark)</a>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="team-pill">
+        <div class="avatar">AC</div>
+        <div>
+          <div style="font-weight:600;color:#fff;font-size:13px">Acme Engineering</div>
+          <div style="font-size:11px;color:#94a3b8">Team · Berlin</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="main">
+    <header class="topbar">
+      <div class="crumbs">Settings · <strong>Agent profiles</strong></div>
+      <div style="display:flex;align-items:center;gap:10px">
+
+        <span class="example-tag">Example data</span>
+        <div class="avatar" title="Maya Chen">MC</div>
+      </div>
+    </header>
+    <div class="content ">
+
+      <div class="page-head">
+        <div>
+          <h1>Agent profiles &amp; providers</h1>
+          <p>BYO keys · adapters for Claude Code, Cursor CLI, Codex, OpenRouter.</p>
+        </div>
+        <button class="btn btn-primary">＋ New profile</button>
+      </div>
+      <div class="grid-3" style="margin-bottom:16px">
+        <div class="card selected">
+          <div style="display:flex;justify-content:space-between"><h3>Claude Code · Sonnet</h3><span class="badge b-success">Key OK</span></div>
+          <p class="muted">Provider: claude_code · Model: claude-sonnet-4</p>
+          <div class="chip-row" style="margin-top:8px"><span class="pill">ask mode</span><span class="pill">budget $5</span></div>
+        </div>
+        <div class="card">
+          <div style="display:flex;justify-content:space-between"><h3>Cursor CLI · Auto</h3><span class="badge b-success">Key OK</span></div>
+          <p class="muted">Provider: cursor_cli · Model: auto</p>
+          <div class="chip-row" style="margin-top:8px"><span class="pill">default mode</span><span class="pill">budget $4</span></div>
+        </div>
+        <div class="card">
+          <div style="display:flex;justify-content:space-between"><h3>OpenRouter · GPT-4.1</h3><span class="badge b-waiting">Key missing</span></div>
+          <p class="muted">Provider: openrouter_loop · Model: openai/gpt-4.1</p>
+          <div class="chip-row" style="margin-top:8px"><span class="pill">loop</span><span class="pill">budget $3</span></div>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="panel" style="padding:16px">
+          <h2 style="margin:0 0 12px;font-size:14px">Edit · Claude Code · Sonnet</h2>
+          <div class="form-grid">
+            <div class="row-2">
+              <div class="field"><label>Display name</label><input class="input" style="width:100%" value="Claude Code · Sonnet"/></div>
+              <div class="field"><label>Provider</label><select style="width:100%"><option>claude_code</option><option>cursor_cli</option><option>codex_cli</option><option>openrouter_loop</option></select></div>
+            </div>
+            <div class="row-2">
+              <div class="field"><label>Model</label><input class="input" style="width:100%" value="claude-sonnet-4"/></div>
+              <div class="field"><label>Permission mode</label><select style="width:100%"><option>ask</option><option>accept edits</option><option>bypass (unsafe)</option></select></div>
+            </div>
+            <div class="field">
+              <label>Instructions</label>
+              <textarea style="width:100%;min-height:110px">You are a careful backend engineer for Acme.
+Prefer small PRs, add tests, never commit secrets.
+Match existing Phoenix/Ecto style.</textarea>
+            </div>
+            <div class="row-2">
+              <div class="field"><label>Budget cap (USD)</label><input class="input" style="width:100%" value="5.00"/></div>
+              <div class="field"><label>API key</label><input class="input" style="width:100%" value="•••••••••••• sk-ant-…9f2" readonly/></div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="btn">Validate CLI</button>
+              <button class="btn btn-primary">Save profile</button>
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-h"><h2>Installed providers</h2></div>
+          <div class="list-row"><div><strong>Claude Code</strong><div class="mono dim">claude ≥ 1.x · stream-json</div></div><span class="badge b-success">Ready</span></div>
+          <div class="list-row"><div><strong>Cursor CLI</strong><div class="mono dim">agent -p · stream-json</div></div><span class="badge b-success">Ready</span></div>
+          <div class="list-row"><div><strong>Codex CLI</strong><div class="mono dim">codex exec</div></div><span class="badge b-queued">Optional</span></div>
+          <div class="list-row"><div><strong>OpenRouter loop</strong><div class="mono dim">built-in / opencode</div></div><span class="badge b-waiting">Needs key</span></div>
+        </div>
+      </div>
+
+      <div class="footer-note">
+        <span>AgentYard · placeholder brand · Acme sample workspace</span>
+        <span>Prototype · not a live product</span>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

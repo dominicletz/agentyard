@@ -1,0 +1,5 @@
+{"type":"message","role":"assistant","content":"I found the relevant file."}
+{"type":"tool_call","name":"Edit","arguments":{"path":"lib/example.ex","changes":1}}
+{"type":"tool_result","name":"Edit","output":"Applied"}
+{"type":"result","usage":{"prompt_tokens":80,"completion_tokens":24,"cached_tokens":4}}
+{"type":"done"}

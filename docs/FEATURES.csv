@@ -1,0 +1,260 @@
+category,feature,description,references,priority
+Triggers & entry points,Start run from web UI,Compose prompt + repo + agent in a browser and launch an async run,CUR CC OH CAM CL ANK TK CDR,MVP
+Triggers & entry points,Start run via REST API,Programmatic create of a session/run,CUR CMA OH ANK CDR SYM?,MVP
+Triggers & entry points,Launch cloud run from local CLI,"e.g. `claude --cloud ""…""`; queue follow-ups from any terminal",CC CUR?,v1
+Triggers & entry points,Launch from desktop IDE,Pick 'Cloud' in the IDE agent dropdown,CUR CC,Not planned
+Triggers & entry points,Mobile app / PWA,Start and steer runs from phone,CUR CC,Later
+Triggers & entry points,GitHub @mention in issue/PR comment,Comment `@bot …` → run → branch/PR,CUR CC OH OHE SWP?,MVP
+Triggers & entry points,GitHub label trigger,Adding a label (e.g. `agent`) starts a run,OH CUR SWP?,MVP
+Triggers & entry points,GitLab @mention / label on issues & MRs,Webhook on notes/labels → run → MR,OHE CC CUR?,MVP
+Triggers & entry points,Bitbucket comment trigger,`@cursor` on Bitbucket PRs,CUR,Later
+Triggers & entry points,Slack mention trigger,`@bot` in a channel/thread starts a run,CUR CC OHE ANK,v1
+Triggers & entry points,Microsoft Teams trigger,Start runs from Teams,CUR ANK,Later
+Triggers & entry points,Linear trigger / sync,Issue created / status change starts a run,CUR SYM OHE?,Later
+Triggers & entry points,Jira Cloud trigger,Ticket mention/label → run,OHE SYM,v1
+Triggers & entry points,Jira Data Center trigger,Self-managed Jira → run,OHE,v1
+Triggers & entry points,Asana source,Poll Asana tasks as work items,SYM,Later
+Triggers & entry points,Sentry / PagerDuty triggers,Error or incident events start an investigation run,CUR,Later
+Triggers & entry points,Generic inbound webhook trigger,Private URL + key; POST to start a run from CI/monitoring,CUR CC,v1
+Triggers & entry points,Tracker polling (no inbound webhooks),Poll issue trackers on an interval instead of receiving webhooks,SYM CAM,v1
+Triggers & entry points,No-repo / start-from-scratch run,Run without cloning a repository,CUR CMA CDR,Later
+Triggers & entry points,Image attachments in prompt,Paste screenshots/mockups into the task,CUR CDR CC?,v1
+Automations & scheduling,Scheduled (cron) runs,Recurring runs on a cron expression,CUR CMA CC,v1
+Automations & scheduling,SCM event triggers,"PR opened/pushed/merged, push to branch, CI completed, review submitted …",CUR CC,v1
+Automations & scheduling,Slack channel event triggers,New message / emoji reaction / channel created,CUR OH?,Later
+Automations & scheduling,Automation run-as identity,Run as creator vs dedicated service account (billing + identity),CUR,v1
+Automations & scheduling,Automation sharing & access,Private / members can view / members can edit,CUR,v1
+Automations & scheduling,Natural-language automation builder,Describe a workflow; tool configures triggers/tools,CUR,Later
+Automations & scheduling,Automation templates marketplace,"Prebuilt templates (fix CI, triage Sentry …)",CUR,Later
+Automations & scheduling,Managed PR review agent,Bugbot-style automatic review of PRs,CUR CC,Later
+Automations & scheduling,Security review agent,Scan PRs/codebase for vulnerabilities,CUR,Later
+Automations & scheduling,Auto-approve / route low-risk PRs,Agent requests reviewers or approves,CUR,Not planned
+Session / run lifecycle,Durable session + per-prompt runs,Session holds conversation/workspace; each prompt is a run,CUR CMA CC OH CDR,MVP
+Session / run lifecycle,Follow-ups on an idle session,Continue the same conversation and workspace,CUR CMA CC OH CL TK CDR ANK CAM?,MVP
+Session / run lifecycle,Steer a running agent,Send messages mid-run (queued until next step if needed),CMA CC CDR OH?,MVP
+Session / run lifecycle,Cancel / interrupt,Stop the active run; terminal state,CUR CMA CC OH CDR CAM? HAR?,MVP
+Session / run lifecycle,Take back a queued message,Retract a not-yet-read follow-up,CC,Later
+Session / run lifecycle,Queueing + concurrency limits,Per-team/repo caps; one active run per session,CUR SYM HAR CAM,MVP
+Session / run lifecycle,Parallel runs,Many independent runs at once,CUR CC SYM HAR CDR,MVP
+Session / run lifecycle,Infrastructure retries,Retry provisioning/clone failures with backoff,CAM? HAR? SYM?,MVP
+Session / run lifecycle,Explicit run state machine,creating → running → finished/error/cancelled/expired,CUR CMA HAR CL,MVP
+Session / run lifecycle,Wall-clock timeout / max turns,Hard stop by time or turns,CC SYM?,MVP
+Session / run lifecycle,Per-issue / per-run workspace lifecycle,"Create, reuse and clean up workspaces per task",SYM CUR HAR,MVP
+Session / run lifecycle,Archive / unarchive / delete,Soft- and hard-delete sessions,CUR CC CMA,v1
+Session / run lifecycle,Idempotent create,Client-supplied id prevents duplicate runs,CUR,v1
+Session / run lifecycle,Hibernate + resume idle sessions,Snapshot/stop idle sandbox; restore on follow-up,CUR CMA CC,v1
+Session / run lifecycle,Plan mode,Explore and propose a plan before editing,CUR CC CDR PLX,v1
+Session / run lifecycle,Teleport session to local terminal,Pull branch + conversation into local CLI,CC,Later
+Session / run lifecycle,Sub-agents / custom sub-agents,Delegate to child agents with own context,CUR CC CDR,Later
+Session / run lifecycle,Multi-agent projects / agent teams,Coordinator spawns and tracks many sessions,CC CDR,Later
+Session / run lifecycle,Implement → commit → review → settle pipeline,Staged lifecycle incl. automated review step,HAR CL,Later
+Session / run lifecycle,Cross-model reviewer,Second agent from another model family reviews the diff,HAR,Later
+Session / run lifecycle,Multi-repo runs,One task spans several repositories,CUR SYM?,Later
+Agent backends & adapters,Claude Code adapter,`claude -p --output-format stream-json`,CC OH CAM CL HAR JH TK?,MVP
+Agent backends & adapters,Cursor CLI adapter,`agent -p --output-format stream-json`,CUR HAR JH TK?,MVP
+Agent backends & adapters,OpenRouter / API-only agent path,Built-in thin loop or Aider/opencode pointed at OpenRouter,OH CDR AID PLX ANK,MVP
+Agent backends & adapters,Codex CLI adapter,`codex exec` / app-server,SYM CAM CL HAR JH OH TK?,v1
+Agent backends & adapters,Gemini CLI adapter,`gemini -p`,OH JH TK?,Later
+Agent backends & adapters,Aider adapter,`aider --message`,AID TK?,Later
+Agent backends & adapters,OpenCode adapter,opencode headless,JH,Later
+Agent backends & adapters,"Long-tail CLIs (Amp, Grok, Kimi, Pi …)",Additional agent CLIs,JH HAR,Later
+Agent backends & adapters,Built-in native agent loop,Own tool loop (bash/read/edit) instead of wrapping a CLI,OH CMA CDR SWE PLX AID ANK,MVP
+Agent backends & adapters,ACP (Agent Client Protocol) support,Talk to agents over ACP,OH CL JH,MVP
+Agent backends & adapters,Pluggable adapter behaviour,Elixir behaviour: prepare/start/follow_up/cancel/normalize,HAR JH CAM?,MVP
+Agent backends & adapters,Normalized event stream,Common status/assistant/tool_call/usage/result events across CLIs,CUR CMA JH HAR,MVP
+Agent backends & adapters,Custom agent command template,Admin-defined CLI invocation for unsupported agents,TK OH,v1
+Agent backends & adapters,HTTP wrapper around CLI agents,Generic HTTP control API for terminal agents (AgentAPI),CDR,Not planned
+Agent backends & adapters,CLI version pinning & detection,Pin agent CLI versions in images; detect binary name,—,MVP
+Models & providers,BYO Anthropic key,Team supplies its own Anthropic key,CC CMA OH CL CDR AID PLX,MVP
+Models & providers,BYO Cursor API key,User/service-account Cursor key for Cursor CLI,CUR,MVP
+Models & providers,OpenRouter provider,Route to any OpenRouter model,OH CDR ANK AID PLX,MVP
+Models & providers,Custom OpenAI-compatible base URL,Internal gateways / EU proxies / self-hosted models,OH CDR AID SWE,MVP
+Models & providers,AWS Bedrock / Google Vertex,"Cloud-provider hosted Claude/Gemini, incl. regional endpoints",CC CDR OH,v1
+Models & providers,Local models (Ollama etc.),Run against on-prem models,CL OH AID,v1
+Models & providers,Model catalog + per-model params,List models; set reasoning effort / context window,CUR,v1
+Models & providers,Default model resolution,User → team → system default,CUR CDR,v1
+Models & providers,Model routing / fallback gateway,Central AI gateway with routing,ANK OH?,Later
+Models & providers,Role-based model packs,Different models for planner/coder/editor,PLX AID,Later
+Models & providers,Vendor-resold models at cost,Use the vendor's model billing,OHE CUR CMA,Not planned
+Models & providers,Prompt caching / context compaction,Harness-level token optimizations,CMA CC CDR OH,Not planned
+Sandbox & environments,Container per run,Isolated Docker container for each run,OH SWE CC CAM? CL?,MVP
+Sandbox & environments,VM / microVM per run,Full VM isolation,CUR CMA CC,Later
+Sandbox & environments,Lightweight OS sandbox (bubblewrap),Namespaced worker processes,ANK,Later
+Sandbox & environments,Git worktree isolation (no container),Parallel agents in separate worktrees on one host,CL HAR,Not planned
+Sandbox & environments,Dockerfile-based environment,Env defined by a Dockerfile in the repo,CUR OH,MVP
+Sandbox & environments,Build-time install vs run-time start commands,Cached install; per-run start commands,CUR CC,MVP
+Sandbox & environments,Container hardening,"Non-root, dropped caps, read-only rootfs where feasible",—,MVP
+Sandbox & environments,CPU / RAM limits,Per-profile resource limits,CDR?,MVP
+Sandbox & environments,Network egress allowlist,Default deny + allowlisted domains,CUR CC CDR CMA,MVP
+Sandbox & environments,Persistent workspace across follow-ups,Keep volume while session is idle,CUR CMA CC,MVP
+Sandbox & environments,Prebuilt base images with common tools,Language toolchains + agent CLIs preinstalled,CC CMA OH,MVP
+Sandbox & environments,Environment snapshots,Save a prepared environment and reuse it,CUR CMA?,v1
+Sandbox & environments,Background builds + version history,Pre-build environments; show which build a run used,CUR,v1
+Sandbox & environments,Devcontainer support,Use devcontainer.json as env spec,CL CDR?,v1
+Sandbox & environments,Remote / self-hosted runners,"Workers on other machines, outbound connection to control plane",CUR CMA CC OHE,v1
+Sandbox & environments,Kubernetes runner,Pod/Job per run,CUR OHE CDR,v1
+Sandbox & environments,Pool routing by label,Route runs to gpu/mac/etc. pools,CUR,Later
+Sandbox & environments,Warm pools + autoscaling controller,Pre-warmed idle workers; scale on queue depth,CUR,Later
+Sandbox & environments,Agent-led environment setup,Agent figures out and saves the setup,CUR,Later
+Sandbox & environments,Private network connectivity,Tailscale or similar from the sandbox,CUR,Later
+Sandbox & environments,Git/API credentials kept outside sandbox,Proxy injects scoped credentials; agent never sees tokens,CC,v1
+Sandbox & environments,No LLM keys in sandbox,Agent loop runs in control plane; workspace needs no AI egress,CDR,Not planned
+Sandbox & environments,Upload local repo bundle (no forge),Send a local repo to a cloud session,CC,Not planned
+Git & forge integration,GitHub.com via GitHub App,"Installation tokens, webhooks, clone/push/PR",CUR CC OH OHE CAM SWP,MVP
+Git & forge integration,GitHub Enterprise Server,Self-hosted GitHub,CUR CC OHE?,v1
+Git & forge integration,GitLab.com,"OAuth/app + webhooks, MRs",CUR OHE CC SYM OH?,MVP
+Git & forge integration,GitLab self-managed,Self-hosted GitLab parity,CUR OHE CC,MVP
+Git & forge integration,Bitbucket Cloud,Bitbucket repos + PRs,CUR,Later
+Git & forge integration,Azure DevOps,Azure Repos,CUR,Later
+Git & forge integration,Generic git remote,"Any git URL with credentials, no forge API",CL HAR AID PLX,v1
+Git & forge integration,Clone at ref + agent branch,Start from branch/SHA; push to `agent/…` branch,CUR CC OH CAM CL SYM,MVP
+Git & forge integration,Auto-open PR/MR,Open PR/MR on completion (configurable),CUR CC OH CAM CL SWP,MVP
+Git & forge integration,Work on existing PR branch,Push to the PR head branch instead of a new branch,CUR CC,MVP
+Git & forge integration,Progress + result comments on issue/PR,Bot posts status and final link,CC OHE SWP CUR? OH?,MVP
+Git & forge integration,Mention permission check,Only users with write access can trigger,CC CUR?,MVP
+Git & forge integration,Fork-PR safety,Refuse runs on fork PR code with repo permissions,CUR,MVP
+Git & forge integration,"Least-privilege, short-lived forge tokens","Installation/project tokens, downgraded scopes",CC OHE CUR?,MVP
+Git & forge integration,Commit/comment identity policy,"Bot identity vs acting user, labeled as agent",CUR CC CDR,MVP
+Git & forge integration,PR status tracking,Track open/merged/closed per run,CAM CL?,v1
+Git & forge integration,CI feedback loop (auto-fix failing checks),Watch PR checks and push fixes,CC CUR,v1
+Git & forge integration,Handle review comments,Respond to inline review comments with fixes,CC CUR SWP?,v1
+Git & forge integration,Request reviewers,Assign reviewers on created PRs,CUR,v1
+Git & forge integration,Repo access verification for viewers,Viewer must have forge access to see a run,CUR CC,v1
+Git & forge integration,Local merge without forge PR,Merge worktree branch locally,CL,Later
+Git & forge integration,Stacked branches per session,Multiple pushed branches/PRs per session,CUR,Later
+Issue trackers & chat,Slack app: mention → run,Start runs from Slack,CUR CC OHE ANK,v1
+Issue trackers & chat,Slack thread follow-ups,Reply in thread to continue the session,OHE CUR?,v1
+Issue trackers & chat,Slack notifications,Post PR link / status to channel,CUR OHE?,v1
+Issue trackers & chat,Jira Cloud integration,"Ticket → run → PR, status back to ticket",OHE SYM,v1
+Issue trackers & chat,Jira Data Center integration,Same for self-managed Jira,OHE,v1
+Issue trackers & chat,GitHub Issues as work queue,Sync issues into the task list/board,CAM SYM,v1
+Issue trackers & chat,Tracker status transitions,Move ticket when run starts/finishes,SYM CL?,v1
+Issue trackers & chat,Linear integration,Linear issues as triggers/sources,CUR SYM OHE?,Later
+Issue trackers & chat,Asana integration,Asana as work source,SYM,Later
+Issue trackers & chat,Microsoft Teams integration,Teams bot,CUR ANK,Later
+Issue trackers & chat,Other chat (Feishu etc.),Non-Western chat platforms,ANK,Not planned
+Web UI,Team-wide runs dashboard,"List/filter runs by status, repo, agent, trigger, cost",CUR CC OH CAM CL SYM HAR ANK,MVP
+Web UI,New run composer,"Repo/branch, profile, prompt, issue, env",CUR CC OH,MVP
+Web UI,Live event timeline,Streaming assistant text + tool calls,CUR CC OH CAM CL HAR TK,MVP
+Web UI,Terminal output view,Command output per tool call,OH TK CUR?,MVP
+Web UI,Diff viewer,Per-file diff with +/- summary,CC CUR OH CL,MVP
+Web UI,Usage & cost panel,"Tokens, USD, budget per run",CL CUR TK,MVP
+Web UI,Search & filter runs,Full-text and facet filters,CUR? CC,MVP
+Web UI,Share run with team,Team-visible run URL,CUR CC,MVP
+Web UI,Setup/build progress view,Live checklist of clone/build/setup steps,CC CUR,MVP
+Web UI,Inline diff comments sent to agent,Comment on lines → next follow-up,CC,v1
+Web UI,"Artifacts (screenshots, videos, logs)",Browse files produced by the run,CUR,v1
+Web UI,HITL approval / review UI,"Approve plans, tool calls, or move to review",CL CC CDR CAM?,v1
+Web UI,Team follow-ups toggle,Let teammates continue someone else's run,CUR,v1
+Web UI,Per-run environment inspection,Which image/build/env a run used,CUR,v1
+Web UI,Ops dashboard (jobs/queues),Oban Web-style queue view for admins,HAR,v1
+Web UI,Mobile-responsive UI,Usable on phones,CUR CC,v1
+Web UI,Kanban board view,Tasks as cards moving through columns,CAM CL TK,Later
+Web UI,Compare diff against any branch,Choose diff base,CC,Later
+Web UI,Interactive web terminal,Human shell into the sandbox,TK CDR OH?,Later
+Web UI,Embedded browser view,See the agent's browser,OH,Later
+Web UI,Remote desktop control,"Take over the agent's desktop, hand back",CUR,Later
+Web UI,In-browser IDE,VS Code in the browser,OH CDR,Not planned
+API & SDK,REST: create / follow-up / cancel / get,Core run API,CUR CMA OH ANK CDR,MVP
+API & SDK,SSE event stream,Stream run events,CUR CMA,MVP
+API & SDK,Stream resume (Last-Event-ID),Reconnect without losing events,CUR,MVP
+API & SDK,Persisted event history,Fetch full event log after the fact,CMA CUR OH,MVP
+API & SDK,Usage endpoint,Token/cost per run and session,CUR,MVP
+API & SDK,OpenAPI spec,Machine-readable API description,CUR,MVP
+API & SDK,Personal API tokens,User-scoped API keys,CUR CMA,MVP
+API & SDK,List repositories endpoint,Repos available to the caller,CUR,MVP
+API & SDK,Service-account API keys,Non-human keys billed to team,CUR,v1
+API & SDK,Outbound webhooks,Notify external systems on run events,CUR,v1
+API & SDK,Artifacts API,List + presigned download,CUR,v1
+API & SDK,Models endpoint,List models/params,CUR,v1
+API & SDK,CLI client,Command-line client for the API,CC CUR,v1
+API & SDK,MCP server exposing the control plane,Let other agents start/inspect runs via MCP,HAR CUR,v1
+API & SDK,WebSocket API,Bidirectional socket API,OH?,Later
+API & SDK,Official client SDKs (TS/Python),Typed SDKs,CUR CMA CC OH,Later
+API & SDK,Terraform provider,Manage automations as code,CUR,Later
+API & SDK,Worker / pool management API,"Pending queue, claim, release, autoscale",CUR,Later
+Tools & MCP,MCP client passthrough (stdio/HTTP),Configure MCP servers for the agent,CUR CMA CC OH CDR,MVP
+Tools & MCP,Built-in bash/file tools,"Shell, read, edit, grep",CMA CC CDR OH SWE,MVP
+Tools & MCP,Team-level MCP registry,Admin-managed MCP servers,CUR OH?,v1
+Tools & MCP,Inline per-run MCP definitions,Pass MCP servers in the API request,CUR,v1
+Tools & MCP,MCP OAuth,OAuth for remote MCP servers,CUR,v1
+Tools & MCP,"Hooks (pre/post tool, lifecycle)","Formatters, policy checks around tool use",CUR CC,v1
+Tools & MCP,Skills / custom tools,Packaged instructions + scripts,CMA CC OH CDR CUR,v1
+Tools & MCP,Web search / fetch with domain policy,Allow/block lists for web tools,CMA CC CDR,v1
+Tools & MCP,Built-in automation tools,"Send to Slack, comment on PR, request reviewers",CUR,v1
+Tools & MCP,Browser / computer use,"Operate a browser or desktop, record demos",CUR CDR OH,Later
+Tools & MCP,MCP tunnels to private servers,Reach private MCP servers from the sandbox,CMA,Later
+Tools & MCP,Elixir dev MCP (Tidewave),Framework-specific MCP,HAR,Not planned
+Human-in-the-loop & permissions,Permission modes,ask / accept-edits / plan / bypass per profile,CC CUR OH CAM,MVP
+Human-in-the-loop & permissions,Tool allow/deny lists,Restrict tools per profile,CC CAM CDR,MVP
+Human-in-the-loop & permissions,Budget hard stop,Pause/stop when budget reached,CL CC,MVP
+Human-in-the-loop & permissions,Who-can-trigger policy,Forge role / team role gates on triggers,CC CUR OHE?,MVP
+Human-in-the-loop & permissions,Review stage before PR/merge,HITL review column,CL HAR,v1
+Human-in-the-loop & permissions,Clarifying questions,Agent asks and waits for answer,CC CDR CMA?,v1
+Human-in-the-loop & permissions,Approve plan before implementation,Plan → approve → execute,CDR CUR CC,v1
+Human-in-the-loop & permissions,Server-enforced admin policy,Models/prompts/tools not overridable by users,CDR CUR,v1
+Human-in-the-loop & permissions,Diff review before apply,"Changes staged in a sandbox, applied on approval",PLX,Later
+Human-in-the-loop & permissions,Risk-based confirmation (security analyzer),LLM rates actions; confirm risky ones,OH,Later
+"Teams, auth & governance",Multi-user accounts,Many users per instance,CUR CC OHE ANK CDR CL? CAM?,MVP
+"Teams, auth & governance",Roles / RBAC,owner/admin/member/viewer,OHE ANK CUR CDR,MVP
+"Teams, auth & governance",Email / magic-link auth,Built-in login without IdP,CAM,MVP
+"Teams, auth & governance",Basic audit log,Who started/changed what,CDR CUR? OHE?,MVP
+"Teams, auth & governance",SSO via OIDC,Login via company IdP,OHE CUR CDR,v1
+"Teams, auth & governance",SAML,SAML IdPs,OHE CUR? CDR,v1
+"Teams, auth & governance",Repo-level ACL mirrored from forge,Visibility follows forge permissions,CUR CC,v1
+"Teams, auth & governance",Organizations / multiple teams,Several teams per instance,CUR CDR OHE,v1
+"Teams, auth & governance",Service accounts,Non-human identities,CUR,v1
+"Teams, auth & governance",Admin policy toggles,"e.g. require self-hosted runners, disable features",CUR CC,v1
+"Teams, auth & governance",Audit log export,SIEM export / API,CDR? OHE?,v1
+"Teams, auth & governance",SCIM provisioning,Automatic user lifecycle,CDR? CUR?,Later
+"Teams, auth & governance",Multi-tenant SaaS isolation,Hard tenant isolation for hosted tier,OHE CUR,Later
+Secrets & security,Encrypted secrets at rest,Cloak/AES-GCM with instance key,OH CL CUR,MVP
+Secrets & security,Scoped secrets (team/repo/profile),Injected only where scoped,CUR OH?,MVP
+Secrets & security,Secret masking in logs/events,Replace known values in output,OH,MVP
+Secrets & security,Write-only secret UI,Values never re-displayed,OH,MVP
+Secrets & security,Session-scoped env vars via API,Ephemeral secrets deleted with the session,CUR,v1
+Secrets & security,External vault integration,HashiCorp Vault / AWS Secrets Manager,OH?,v1
+Secrets & security,Master key rotation,Re-encrypt with a new key,—,v1
+Secrets & security,Workload identity (OIDC) to clouds,No static cloud keys,CC CUR,Later
+Secrets & security,Data retention & deletion controls,Delete sessions/files; retention policy,CMA CC,v1
+Secrets & security,Untrusted-input guardrails,Caution on memories/fork PRs/public issues,CUR CC,MVP
+Secrets & security,Compliance trust center,SOC2 etc. attestations,OHE CUR? CC?,Later
+Cost & usage,Token tracking per run,Input/output/cache tokens,CUR CL CC OH TK,MVP
+Cost & usage,USD cost per run,From CLI result events / price table,CC CL OH?,MVP
+Cost & usage,Per-run budget cap,e.g. `--max-budget-usd` + control-plane cap,CC CL,MVP
+Cost & usage,Team spend limits / quotas,Monthly caps per team,CUR ANK,v1
+Cost & usage,Attribution by team/user/repo,Who spent what,CUR ANK,v1
+Cost & usage,Usage dashboards,Trends over time,CUR CDR?,v1
+Cost & usage,Pre-run cost estimate,Estimate from similar runs,—,Later
+Observability,Persisted per-run event log,"Durable, replayable events",CUR CMA OH CAM CL,MVP
+Observability,Setup / build logs,"Clone, build and install output",CUR CC,MVP
+Observability,Structured app logs with run id,Correlated logs,—,MVP
+Observability,Transcript export,Download full conversation,CUR CC,v1
+Observability,OpenTelemetry traces/metrics,OTel export,CC OH?,v1
+Observability,Prometheus metrics,"Queue depth, run durations, failures",—,v1
+Observability,Diagnostics MCP,Agents inspect runs via MCP,CUR,Later
+Observability,Trajectory inspector,Research-style step browser,SWE,Not planned
+Memory & knowledge,Repo rules files,AGENTS.md / CLAUDE.md / .cursor/rules honored,CC CUR OH AID SYM,MVP
+Memory & knowledge,Profile instructions / system prompt,Per-profile instructions,CMA CAM CL? CUR?,MVP
+Memory & knowledge,Prompt templates / workflow Markdown,Reusable task templates,CAM SYM,v1
+Memory & knowledge,Skills,Reusable skill packages,CMA CC OH CDR CUR,v1
+Memory & knowledge,Keyword-triggered microagents,Knowledge injected by keyword,OH,Later
+Memory & knowledge,Persistent memories across runs,Agent-maintained notes between runs,CUR CMA? ANK?,Later
+Memory & knowledge,Repo map / large-codebase indexing,Codebase maps for context,AID PLX OHE,Not planned
+Deployment & ops,Docker Compose install,One-command self-host,CAM CL OH ANK PLX,MVP
+Deployment & ops,EU-hostable self-host,"Runs anywhere, incl. EU clouds; no US SaaS dependency",OH OHE CDR CMA? CC?,MVP
+Deployment & ops,DB migrations on upgrade,"Safe, automatic migrations",—,MVP
+Deployment & ops,Helm chart / Kubernetes,K8s deployment,OHE CUR CDR,v1
+Deployment & ops,Backups & restore guide,Postgres + object storage,—,v1
+Deployment & ops,Single-binary releases,Burrito-style binaries,SYM TK,Later
+Deployment & ops,HA / clustered control plane,"BEAM clustering, multiple nodes",OHE?,Later
+Deployment & ops,Air-gapped install,No internet at install/run,CDR? OHE?,Later
+Deployment & ops,Replicated-style enterprise installer,Licensed installer tooling,OHE,Not planned
+Licensing & business,OSI open-source core,Permissive/copyleft OSI license,OH SYM ANK JH AID SWE PLX CDR,MVP
+Licensing & business,Team features open source,Multi-user/RBAC/SSO not paywalled,ANK CDR?,MVP
+Licensing & business,Managed hosted offering,Vendor-run SaaS,CUR CMA CC OHE,Later
+Licensing & business,Paid support / SLA,Commercial support,OHE CDR,Later
+Licensing & business,Source-available enterprise tier,PolyForm/ELv2/proprietary add-ons,OHE CL CDR,Not planned
+Licensing & business,Free individual SaaS tier,Free hosted single user,OHE,Not planned
+Licensing & business,Usage-based billing at API prices,Vendor bills model usage,CUR CMA,Not planned
+Licensing & business,Copyleft license,GPL/AGPL,CAM CDR,Not planned
