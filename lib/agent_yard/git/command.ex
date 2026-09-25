@@ -19,7 +19,19 @@ defmodule AgentYard.Git.Command do
     end
   end
 
-  def branch(workspace, branch), do: run(["-C", workspace, "switch", "-c", branch])
+  def branch(workspace, branch) do
+    case run(["-C", workspace, "switch", "-c", branch]) do
+      {:ok, _output} = result ->
+        result
+
+      {:error, {:git_failed, _, message}} = error ->
+        if String.contains?(message, "already exists") do
+          run(["-C", workspace, "switch", branch])
+        else
+          error
+        end
+    end
+  end
 
   def commit_push(workspace, branch, message) do
     with {:ok, _} <- run(["-C", workspace, "add", "--all"]),
