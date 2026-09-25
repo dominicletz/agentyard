@@ -5,6 +5,7 @@ defmodule AgentYard.Runs do
 
   import Ecto.Query, warn: false
   alias AgentYard.Accounts.{Team, User}
+  alias AgentYard.Agents.Event
   alias AgentYard.AgentProfiles.Profile
   alias AgentYard.Repo
   alias AgentYard.Repositories.Repository
@@ -143,7 +144,7 @@ defmodule AgentYard.Runs do
         |> Kernel.||(0)
         |> Kernel.+(1)
 
-      payload = AgentYard.Agents.Event.to_payload(event)
+      payload = Event.to_payload(event)
 
       {:ok, record} =
         %RunEvent{}

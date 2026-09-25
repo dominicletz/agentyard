@@ -3,8 +3,8 @@ defmodule AgentYard.RunsLifecycleTest do
 
   alias AgentYard.Accounts.{Membership, Team, User}
   alias AgentYard.AgentProfiles.Profile
-  alias AgentYard.Repositories.Repository
   alias AgentYard.Repo
+  alias AgentYard.Repositories.Repository
   alias AgentYard.Runs
   alias AgentYard.Runs.{RunEvent, Session}
 

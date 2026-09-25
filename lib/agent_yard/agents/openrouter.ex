@@ -70,13 +70,15 @@ defmodule AgentYard.Agents.OpenRouter do
   end
 
   defp handle_response(response, callback) do
-    with {:ok, %{"choices" => [choice | _]} = decoded} <- Jason.decode(to_string(response)) do
-      callback.(Event.assistant_delta(get_in(choice, ["message", "content"]) || ""))
-      callback.(Event.usage(decoded["usage"] || %{}))
-      callback.(Event.result("OpenRouter request completed"))
-      callback.(Event.done())
-    else
-      _ -> fail(callback, "OpenRouter returned an unexpected response")
+    case Jason.decode(to_string(response)) do
+      {:ok, %{"choices" => [choice | _]} = decoded} ->
+        callback.(Event.assistant_delta(get_in(choice, ["message", "content"]) || ""))
+        callback.(Event.usage(decoded["usage"] || %{}))
+        callback.(Event.result("OpenRouter request completed"))
+        callback.(Event.done())
+
+      _ ->
+        fail(callback, "OpenRouter returned an unexpected response")
     end
   end
 
