@@ -6,5 +6,12 @@ assets/node_modules
 node_modules
 tmp
 *.log
+
+# Runtime credentials and other local secret material stay outside the build context.
 .env
 .env.*
+secrets/
+*.secret
+*.secret.*
+*.pem
+*.key
