@@ -206,7 +206,7 @@ defmodule AgentYardWeb.WebhookController do
 
   defp reject_fork(_issue), do: :ok
 
-  defp reject_gitlab_fork(%{"object_attributes" => attributes} = params) do
+  defp reject_gitlab_fork(%{"object_attributes" => attributes}) do
     if attributes["source_project_id"] && attributes["target_project_id"] &&
          attributes["source_project_id"] != attributes["target_project_id"],
        do: {:error, :fork_merge_request_rejected},

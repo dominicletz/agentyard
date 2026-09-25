@@ -48,7 +48,7 @@ defmodule AgentYard.Runs.GitOrchestrator do
          )
        ]}
 
-  def finalize(%Run{} = run, %{git_prepared: false}),
+  def finalize(%Run{} = _run, %{git_prepared: false}),
     do: {:ok, nil, [Event.status("Auto PR/MR skipped: workspace was not prepared")]}
 
   def finalize(%Run{} = run, config) do
