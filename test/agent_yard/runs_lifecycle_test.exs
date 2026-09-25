@@ -32,6 +32,12 @@ defmodule AgentYard.RunsLifecycleTest do
              end)
 
       events = Runs.list_events(Repo.get!(AgentYard.Runs.Run, run.id))
+
+      assert Enum.count(
+               events,
+               &(&1.kind == "status" and &1.payload["message"] == "Creating an isolated workspace")
+             ) == 1
+
       assert Enum.any?(events, &(&1.kind == "assistant_delta"))
       assert Enum.any?(events, &(&1.kind == "done"))
       assert Enum.all?(events, &match?(%RunEvent{}, &1))

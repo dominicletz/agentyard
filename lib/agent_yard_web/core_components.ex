@@ -3,6 +3,9 @@ defmodule AgentYardWeb.CoreComponents do
   Shared UI components used by AgentYard LiveViews and layouts.
   """
 
+  @cent Decimal.new("0.01")
+  @zero Decimal.new("0")
+
   use Phoenix.Component
 
   attr(:flash, :map, required: true)
@@ -30,4 +33,23 @@ defmodule AgentYardWeb.CoreComponents do
     |> String.replace("_", " ")
     |> String.capitalize()
   end
+
+  def money(nil), do: "0.00"
+
+  def money(value) do
+    amount = if is_struct(value, Decimal), do: value, else: Decimal.new(to_string(value))
+
+    precision =
+      if Decimal.compare(Decimal.abs(amount), @cent) == :lt and
+           Decimal.compare(amount, @zero) != :eq do
+        4
+      else
+        2
+      end
+
+    Decimal.to_string(Decimal.round(amount, precision))
+  end
+
+  def format_payload(value) when is_binary(value), do: value
+  def format_payload(value), do: inspect(value, pretty: true, width: 100)
 end

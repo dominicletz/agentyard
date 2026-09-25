@@ -32,7 +32,7 @@ defmodule AgentYardWeb.ProfilesLive.Index do
         <div :for={profile <- @profiles} class="profile-card">
           <div class="profile-card-top"><span class={"provider-icon provider-#{profile.provider}"}><%= provider_mark(profile.provider) %></span><div><strong><%= profile.name %></strong><small><%= profile.provider %> · <%= profile.model || "default model" %></small></div><span class="ready-pill">● Ready</span></div>
           <p class="muted"><%= profile.instructions || "No additional instructions configured." %></p>
-          <div class="profile-meta"><span>Permission: <%= profile.permission_mode %></span><span>Budget: $<%= Decimal.to_string(profile.budget_usd || Decimal.new("5.00")) %></span></div>
+          <div class="profile-meta"><span>Permission: <%= profile.permission_mode %></span><span>Budget: $<%= money(profile.budget_usd || Decimal.new("5.00")) %></span></div>
         </div>
         <div :if={@profiles == []} class="empty-state">No profiles configured.</div>
       </section>

@@ -6,6 +6,7 @@
     <meta name="csrf-token" content={Plug.CSRFProtection.get_csrf_token()} />
     <title><%= assigns[:page_title] || "AgentYard" %></title>
     <link rel="stylesheet" href={~p"/css/app.css"} />
+    <link rel="stylesheet" href={~p"/css/polish.css"} />
     <script defer phx-track-static src={~p"/js/app.js"}></script>
   </head>
   <body>

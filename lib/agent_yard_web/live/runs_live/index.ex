@@ -45,7 +45,7 @@ defmodule AgentYardWeb.RunsLive.Index do
       <div class="metric-card"><span>Running</span><strong class="metric-blue"><%= count(@runs, "running") %></strong></div>
       <div class="metric-card"><span>Queued</span><strong><%= count(@runs, "queued") %></strong></div>
       <div class="metric-card"><span>Succeeded (24h)</span><strong class="metric-green"><%= count(@runs, "succeeded") %></strong></div>
-      <div class="metric-card"><span>Spend (visible)</span><strong>$<%= Decimal.to_string(total_cost(@runs)) %></strong></div>
+      <div class="metric-card"><span>Spend (visible)</span><strong>$<%= money(total_cost(@runs)) %></strong></div>
     </div>
 
     <section class="panel runs-panel">
@@ -75,7 +75,7 @@ defmodule AgentYardWeb.RunsLive.Index do
               <td><span class="tag"><%= run.session.repository.name %></span></td>
               <td><%= run.session.agent_profile.name %></td>
               <td><span class="tag tag-muted"><%= run.trigger %></span></td>
-              <td>$<%= Decimal.to_string(run.cost_usd || Decimal.new("0")) %></td>
+              <td>$<%= money(run.cost_usd) %></td>
               <td class="muted"><%= relative_time(run.inserted_at) %></td>
             </tr>
             <tr :if={@runs == []}><td colspan="7" class="empty-state">No runs match these filters.</td></tr>
