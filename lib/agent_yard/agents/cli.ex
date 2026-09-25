@@ -24,6 +24,7 @@ defmodule AgentYard.Agents.CLI do
   end
 
   def cancel(%{worker: pid}) when is_pid(pid) do
+    Process.unlink(pid)
     Process.exit(pid, :kill)
     :ok
   end
