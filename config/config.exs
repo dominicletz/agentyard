@@ -5,7 +5,11 @@ config :agentyard,
   generators: [timestamp_type: :utc_datetime_usec],
   start_repo: true,
   demo_mode: true,
-  secret_key: System.get_env("AGENTYARD_SECRET_KEY") || "development-secret-change-me"
+  secret_key: System.get_env("AGENTYARD_SECRET_KEY") || "development-secret-change-me",
+  mailer_from: {"AgentYard", "no-reply@agentyard.local"}
+
+config :agentyard, AgentYard.Mailer,
+  adapter: Swoosh.Adapters.Local
 
 config :agentyard, AgentYardWeb.Endpoint,
   url: [host: "localhost"],

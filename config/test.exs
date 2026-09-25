@@ -4,6 +4,9 @@ config :agentyard,
   start_repo: not is_nil(System.get_env("DATABASE_URL")),
   demo_mode: false
 
+config :agentyard, AgentYard.Mailer,
+  adapter: Swoosh.Adapters.Test
+
 if database_url = System.get_env("DATABASE_URL") do
   config :agentyard, AgentYard.Repo,
     url: database_url,
