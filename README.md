@@ -42,8 +42,7 @@ CI additionally creates and migrates a Postgres database.
   Run detail, Repositories, Agent profiles and Team settings.
 - Ecto/Postgres schemas for users, teams, memberships, repositories, profiles,
   secrets, sessions, runs and normalized event logs.
-- Password authentication, team membership roles (`owner`, `admin`, `member`,
-  `viewer`),
+- Password authentication, team membership roles (`owner`, `admin`, `member`),
   session auth, personal bearer API tokens and team-scoped authorization.
 - OTP `DynamicSupervisor` plus a per-run `GenServer`, PubSub timeline updates
   and an Oban worker boundary for queued runs.
