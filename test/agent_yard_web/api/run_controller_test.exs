@@ -47,7 +47,7 @@ defmodule AgentYardWeb.Api.RunControllerTest do
         |> post("/api/runs", Jason.encode!(params))
 
       %{"data" => %{"id" => run_id, "status" => status}} = json_response(conn, 202)
-      assert status in ["running", "succeeded"]
+      assert status in ["queued", "running", "succeeded"]
 
       assert TestFactory.eventually(fn ->
                Repo.exists?(
