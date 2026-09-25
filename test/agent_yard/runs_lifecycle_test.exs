@@ -150,4 +150,31 @@ defmodule AgentYard.RunsLifecycleTest do
              end)
     end
   end
+
+  test "allows a run whose reported cost is exactly its budget", context do
+    if context[:database] == false do
+      assert true
+    else
+      profile =
+        TestFactory.profile_fixture(context.team, %{
+          name: "Exact budget fake",
+          budget_usd: Decimal.new("0.04")
+        })
+
+      {:ok, run} =
+        Runs.create_run(context.user, context.team, %{
+          repository_id: context.repository.id,
+          agent_profile_id: profile.id,
+          prompt: "Stay exactly within budget"
+        })
+
+      assert {:ok, _job} = Runs.start_run(run)
+
+      assert TestFactory.eventually(fn ->
+               Repo.get!(AgentYard.Runs.Run, run.id).status == "succeeded"
+             end)
+
+      assert Repo.get!(AgentYard.Runs.Run, run.id).cost_usd == Decimal.new("0.04")
+    end
+  end
 end

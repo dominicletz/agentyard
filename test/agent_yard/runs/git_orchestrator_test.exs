@@ -87,4 +87,18 @@ defmodule AgentYard.Runs.GitOrchestratorTest do
     assert diff =~ "new.txt"
     assert diff =~ "+new file"
   end
+
+  test "skips forge publication with an explicit event when no token is available" do
+    run = %Run{
+      id: Ecto.UUID.generate(),
+      prompt: "No forge credentials",
+      auto_pr: true,
+      session: %Session{repository: %Repository{forge: "gitlab"}}
+    }
+
+    assert {:ok, nil, [%AgentYard.Agents.Event{type: "status", message: message}]} =
+             GitOrchestrator.finalize(run, %{forge_token: nil})
+
+    assert message =~ "no GITLAB_TOKEN configured"
+  end
 end

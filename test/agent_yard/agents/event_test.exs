@@ -19,4 +19,12 @@ defmodule AgentYard.Agents.EventTest do
     event = Event.assistant_delta("nothing to hide")
     assert Event.mask(event, %{"EMPTY" => ""}) == event
   end
+
+  test "masks secrets in persisted workspace diffs" do
+    event = Event.workspace_diff("+token=top-secret\n")
+    masked = Event.mask(event, %{"API_TOKEN" => "top-secret"})
+
+    assert masked.diff == "+token=[REDACTED]\n"
+    assert Event.to_payload(masked)["diff"] == "+token=[REDACTED]\n"
+  end
 end

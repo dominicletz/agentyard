@@ -4,7 +4,7 @@ FROM debian:bookworm-slim
 # exposes only the latest channel, so the build fails unless CI supplies the
 # expected version and verifies the installer output below.
 ARG CLAUDE_CODE_VERSION=2.1.258
-ARG CURSOR_CLI_VERSION
+ARG CURSOR_CLI_VERSION=2026.09.23-86fc751
 
 ENV DEBIAN_FRONTEND=noninteractive \
     DISABLE_AUTOUPDATER=1 \
@@ -19,13 +19,17 @@ RUN curl -fsSL \
       -o /usr/local/bin/claude \
     && chmod 0755 /usr/local/bin/claude
 
-RUN test -n "${CURSOR_CLI_VERSION}" \
-    && curl https://cursor.com/install -fsS | bash \
-    && cp /root/.local/bin/agent /usr/local/bin/agent \
+RUN mkdir -p /tmp/cursor-agent \
+    && curl -fsSL \
+      "https://downloads.cursor.com/lab/${CURSOR_CLI_VERSION}/linux/x64/agent-cli-package.tar.gz" \
+      -o /tmp/cursor-agent/package.tar.gz \
+    && tar -xzf /tmp/cursor-agent/package.tar.gz -C /tmp/cursor-agent \
+    && install -m 0755 /tmp/cursor-agent/dist-package/cursor-agent /usr/local/bin/agent \
     && ln -s /usr/local/bin/agent /usr/local/bin/cursor-agent \
     && agent_version="$(/usr/local/bin/agent --version)" \
     && printf '%s\n' "${agent_version}" \
-    && printf '%s\n' "${agent_version}" | grep -F "${CURSOR_CLI_VERSION}"
+    && test "${agent_version}" = "${CURSOR_CLI_VERSION}" \
+    && rm -rf /tmp/cursor-agent
 
 RUN useradd --create-home --shell /bin/bash runner \
     && mkdir -p /workspace \
