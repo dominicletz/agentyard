@@ -2,7 +2,7 @@ defmodule AgentYardWeb.WebhookController do
   use AgentYardWeb, :controller
 
   alias AgentYard.{Accounts, AgentProfiles, Repositories, Runs}
-  alias AgentYard.Webhooks.Signature
+  alias AgentYard.Webhooks.{Policy, Signature}
 
   @mention ~r/@agentyard\b/i
   @labels ~w(agent agentyard)
@@ -99,13 +99,12 @@ defmodule AgentYardWeb.WebhookController do
 
   defp github_issue_comment(params) do
     repository = params["repository"] || %{}
-    sender = params["sender"] || %{}
 
     comment = get_in(params, ["comment", "body"]) || ""
     issue = params["issue"] || %{}
 
-    with :ok <- permitted?(sender, repository),
-         :ok <- reject_fork(issue),
+    with :ok <- Policy.authorize_github_mention(params),
+         :ok <- Policy.reject_github_fork(params),
          true <- mention?(comment) do
       {:ok,
        %{
@@ -125,11 +124,10 @@ defmodule AgentYardWeb.WebhookController do
 
   defp github_label(params) do
     repository = params["repository"] || %{}
-    sender = params["sender"] || %{}
     label = get_in(params, ["label", "name"]) || ""
 
-    with :ok <- permitted?(sender, repository),
-         :ok <- reject_fork(params),
+    with :ok <- Policy.authorize_github_mention(params),
+         :ok <- Policy.reject_github_fork(params),
          true <- params["action"] == "labeled" and label in @labels do
       {:ok,
        %{
@@ -149,7 +147,6 @@ defmodule AgentYardWeb.WebhookController do
 
   defp gitlab_request(params) do
     project = params["project"] || %{}
-    user = params["user"] || %{}
     attributes = params["object_attributes"] || %{}
     note = attributes["note"] || ""
     labels = params["labels"] || []
@@ -158,8 +155,8 @@ defmodule AgentYardWeb.WebhookController do
 
     cond do
       mention?(note) ->
-        with :ok <- gitlab_permitted?(user),
-             :ok <- reject_gitlab_fork(params) do
+        with :ok <- Policy.authorize_gitlab_mention(params),
+             :ok <- Policy.reject_gitlab_fork(params) do
           {:ok,
            %{
              repository: project,
@@ -175,8 +172,8 @@ defmodule AgentYardWeb.WebhookController do
         end
 
       Enum.any?(label_names, &(&1 in @labels)) ->
-        with :ok <- gitlab_permitted?(user),
-             :ok <- reject_gitlab_fork(params) do
+        with :ok <- Policy.authorize_gitlab_mention(params),
+             :ok <- Policy.reject_gitlab_fork(params) do
           {:ok,
            %{
              repository: project,
@@ -195,34 +192,6 @@ defmodule AgentYardWeb.WebhookController do
         :ignore
     end
   end
-
-  defp permitted?(sender, repository) do
-    permissions = sender["permissions"] || repository["permissions"] || %{}
-
-    if permissions["push"] || permissions["maintain"] || permissions["admin"],
-      do: :ok,
-      else: {:error, :mentioner_lacks_write_access}
-  end
-
-  defp gitlab_permitted?(user) do
-    if (user["access_level"] || 0) >= 30,
-      do: :ok,
-      else: {:error, :mentioner_lacks_write_access}
-  end
-
-  defp reject_fork(%{"pull_request" => %{"head" => %{"repo" => %{"fork" => true}}}}),
-    do: {:error, :fork_pull_request_rejected}
-
-  defp reject_fork(_issue), do: :ok
-
-  defp reject_gitlab_fork(%{"object_attributes" => attributes}) do
-    if attributes["source_project_id"] && attributes["target_project_id"] &&
-         attributes["source_project_id"] != attributes["target_project_id"],
-       do: {:error, :fork_merge_request_rejected},
-       else: :ok
-  end
-
-  defp reject_gitlab_fork(_params), do: :ok
 
   defp mention?(text), do: Regex.match?(@mention, text)
 
