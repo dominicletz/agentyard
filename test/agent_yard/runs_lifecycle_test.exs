@@ -113,7 +113,11 @@ defmodule AgentYard.RunsLifecycleTest do
              end)
 
       events = Runs.list_events(Repo.get!(AgentYard.Runs.Run, run.id))
-      assert Enum.any?(events, &(&1.payload["message"] =~ "budget exceeded"))
+
+      assert Enum.any?(events, fn event ->
+               is_binary(event.payload["message"]) and
+                 event.payload["message"] =~ "budget exceeded"
+             end)
     end
   end
 end
