@@ -4,12 +4,12 @@ defmodule AgentYard.Accounts do
   """
 
   import Ecto.Query, warn: false
-alias AgentYard.Accounts.{ApiToken, MagicLinkEmail, MagicLinkToken, Membership, Team, User}
+  alias AgentYard.Accounts.{ApiToken, MagicLinkEmail, MagicLinkToken, Membership, Team, User}
   alias AgentYard.Repo
-require Logger
+  require Logger
 
-@magic_link_ttl_seconds 30 * 60
-@magic_link_request_interval_seconds 60
+  @magic_link_ttl_seconds 30 * 60
+  @magic_link_request_interval_seconds 60
 
   def get_user(id), do: Repo.get(User, id)
 

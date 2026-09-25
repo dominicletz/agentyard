@@ -120,7 +120,10 @@ defmodule AgentYard.AccountsMagicLinkTest do
              end)
 
     assert_received {:email, email}
-    [_, raw_token] = Regex.run(~r{https://example\.test/login/magic/([A-Za-z0-9_-]+)}, email.text_body)
+
+    [_, raw_token] =
+      Regex.run(~r{https://example\.test/login/magic/([A-Za-z0-9_-]+)}, email.text_body)
+
     raw_token
   end
 

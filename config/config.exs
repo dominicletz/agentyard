@@ -8,8 +8,7 @@ config :agentyard,
   secret_key: System.get_env("AGENTYARD_SECRET_KEY") || "development-secret-change-me",
   mailer_from: {"AgentYard", "no-reply@agentyard.local"}
 
-config :agentyard, AgentYard.Mailer,
-  adapter: Swoosh.Adapters.Local
+config :agentyard, AgentYard.Mailer, adapter: Swoosh.Adapters.Local
 
 config :agentyard, AgentYardWeb.Endpoint,
   url: [host: "localhost"],
