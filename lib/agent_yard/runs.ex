@@ -130,7 +130,10 @@ defmodule AgentYard.Runs do
       %Run{status: "queued"} = run ->
         start_queued_run(run)
 
-      %Run{status: status} when status in ["running", "succeeded", "failed", "cancelled"] ->
+      %Run{status: "running"} = run ->
+        recover_running_run(run)
+
+      %Run{status: status} when status in ["succeeded", "failed", "cancelled"] ->
         {:error, {:invalid_run_status, status}}
 
       nil ->
@@ -142,6 +145,13 @@ defmodule AgentYard.Runs do
     if concurrency_available?(run),
       do: start_run_process(run.id),
       else: {:error, :concurrency_limit}
+  end
+
+  defp recover_running_run(run) do
+    case Registry.lookup(AgentYard.Runs.Registry, run.id) do
+      [{pid, _}] -> {:ok, pid}
+      [] -> start_run_process(run.id)
+    end
   end
 
   defp start_run_process(run_id) do
