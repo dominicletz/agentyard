@@ -47,7 +47,7 @@ defmodule AgentYardWeb.ProfilesLive.Index do
         <%= if @error do %><p class="flash flash-error"><%= @error %></p><% end %>
         <form phx-submit="create" class="stack-form">
           <label>Name<input name="name" value="Fake demo agent" required /></label>
-          <label>Provider<select name="provider"><option value="fake">Fake / scripted</option><option value="claude_code">Claude Code</option><option value="cursor_cli">Cursor CLI</option><option value="openrouter">OpenRouter</option></select></label>
+          <label>Provider<select name="provider"><option value="fake">Fake / scripted</option><option value="claude_code">Claude Code</option><option value="cursor_cli">Cursor CLI</option><option value="openrouter">OpenRouter</option><option value="acp">ACP boundary (stub)</option></select></label>
           <label>Model<input name="model" placeholder="claude-sonnet-4-5" /></label>
           <label>OpenAI-compatible base URL <span class="muted">(optional)</span><input name="base_url" placeholder="https://openrouter.ai/api/v1" /></label>
           <label>MCP servers <span class="muted">(JSON, optional)</span><textarea name="mcp_servers" rows="4" placeholder='{"docs":{"command":"npx","args":["-y","mcp-docs"]}}'></textarea></label>

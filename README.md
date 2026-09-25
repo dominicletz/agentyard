@@ -117,11 +117,11 @@ See [`priv/static/openapi.yaml`](priv/static/openapi.yaml) or
 ## Roadmap
 
 The complete catalog is in [`docs/FEATURES.md`](docs/FEATURES.md) and
-[`docs/FEATURES.csv`](docs/FEATURES.csv). Next increments should wire
-forge-native webhooks and safe clone/branch/PR orchestration, then complete
-Docker environment builds, provider credentials, invitations/audit events,
-and GitLab self-managed validation. Slack/Jira triggers, OIDC/SAML, remote
-runner pools, Helm and richer review workflows follow in v1.
+[`docs/FEATURES.csv`](docs/FEATURES.csv). Next increments should add GitHub
+App installation and live forge permission lookups, then complete Docker
+environment builds, provider credentials, invitations/audit exports, and
+GitLab self-managed validation. Slack/Jira triggers, OIDC/SAML, remote runner
+pools, Helm and richer review workflows follow in v1.
 
 Product and technical rationale: [`docs/CONCEPT.md`](docs/CONCEPT.md).
 
@@ -130,6 +130,6 @@ Product and technical rationale: [`docs/CONCEPT.md`](docs/CONCEPT.md).
 The current MVP gap map is tracked in
 [`docs/IMPLEMENTATION-TODO.md`](docs/IMPLEMENTATION-TODO.md). Remaining
 boundaries are deliberate: forge App installation and live permission APIs,
-operator-provided Docker egress policy, ACP, magic links, retry/cleanup
-hardening, and audit exports.
+operator-provided Docker egress policy, ACP runtime transport, magic links,
+and audit exports.
 Static visual references: [`docs/prototype/`](docs/prototype/).

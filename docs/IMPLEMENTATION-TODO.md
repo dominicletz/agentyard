@@ -57,8 +57,8 @@ hardening remains.
 | M36 | Record a basic audit event for mutations | Done |
 | M37 | Keep magic-link authentication deferred with an explicit boundary | Partial |
 | M38 | Preserve explicit queued/running/succeeded/failed/cancelled state transitions | Done |
-| M39 | Retry provisioning failures without replaying agent turns | Partial |
-| M40 | Clean up sandbox resources after terminal states | Partial |
+| M39 | Retry provisioning failures without replaying agent turns | Done |
+| M40 | Clean up sandbox resources after terminal states | Done |
 
 ## Sprint D — inspection and API
 
@@ -70,7 +70,7 @@ hardening remains.
 | M44 | Expose `GET /api/repositories` | Done |
 | M45 | Expose a per-run and session usage endpoint | Done |
 | M46 | Pass configured MCP servers through to adapters | Done |
-| M47 | Define an ACP adapter boundary | Partial |
+| M47 | Define an ACP adapter boundary | Done |
 | M48 | Show setup and sandbox progress in the timeline | Done |
 | M49 | Preserve run event history and resumable SSE | Done |
 | M50 | Keep OpenAPI documentation aligned with added endpoints | Done |
@@ -96,5 +96,6 @@ dispatch, fail-closed fork/permission policy checks, and best-effort issue/PR
 comments; GitHub App installation UX and live forge permission lookups remain
 open. Docker allowlists require an explicit operator policy hook rather than
 silently using unrestricted bridge networking. Durable diffs, repository and
-usage APIs, pinned runner binaries, and MCP passthrough are now wired; ACP,
-magic links, retry/cleanup hardening, and audit exports remain follow-up work.
+usage APIs, pinned runner binaries, and MCP passthrough are now wired. The ACP
+adapter is a compilable, explicitly NotImplemented boundary; a real protocol
+transport, magic-link authentication, and audit exports remain follow-up work.

@@ -2,7 +2,7 @@ defmodule AgentYard.AgentProfiles.Profile do
   use Ecto.Schema
   import Ecto.Changeset
 
-  @providers ~w(fake claude_code cursor_cli openrouter)
+  @providers ~w(fake claude_code cursor_cli openrouter acp)
   @permissions ~w(ask accept_edits plan bypass)
 
   @primary_key {:id, :binary_id, autogenerate: true}

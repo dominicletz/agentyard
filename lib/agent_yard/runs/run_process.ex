@@ -8,6 +8,7 @@ defmodule AgentYard.Runs.RunProcess do
   alias AgentYard.Agents.{Event, Fake}
   alias AgentYard.Runs
   alias AgentYard.Runs.GitOrchestrator
+  alias AgentYard.Runs.ResourceCleanup
   alias AgentYard.Sandboxes.{Docker, Local}
   alias AgentYard.Secrets
 
@@ -47,6 +48,10 @@ defmodule AgentYard.Runs.RunProcess do
            adapter_state: nil,
            failed: false,
            turns: 0,
+           phase: :provisioning,
+           provision_attempt: 0,
+           provision_retry_ref: nil,
+           cleanup_done: false,
            secret_values: secret_values,
            run_config: nil,
            sandbox: nil,
@@ -57,17 +62,34 @@ defmodule AgentYard.Runs.RunProcess do
 
   @impl true
   def handle_continue(:start, state) do
+    provision(state)
+  end
+
+  @impl true
+  def handle_info(:retry_provisioning, state) do
+    provision(%{state | provision_retry_ref: nil})
+  end
+
+  defp provision(state) do
     owner = self()
+    attempt = state.provision_attempt + 1
     config = adapter_config(state.run, state.secret_values)
     sandbox = sandbox_for(state.run)
-    state = %{state | run_config: config, sandbox: sandbox}
+
+    state = %{
+      state
+      | run_config: config,
+        sandbox: sandbox,
+        provision_attempt: attempt,
+        phase: :provisioning
+    }
 
     with {:ok, sandbox_config} <-
            sandbox.prepare(Map.put(config, :sandbox_module, sandbox)),
          {:ok, prepared, setup_events} <- GitOrchestrator.prepare(state.run, sandbox_config) do
       state =
         state
-        |> Map.put(:run_config, prepared)
+        |> Map.merge(%{run_config: prepared, phase: :starting_adapter})
         |> persist_events([
           Event.status("Starting #{sandbox_name(sandbox)} sandbox") | setup_events
         ])
@@ -75,7 +97,7 @@ defmodule AgentYard.Runs.RunProcess do
       start_adapter(state, prepared, owner)
     else
       {:error, reason} ->
-        stop_failed(state, reason)
+        retry_or_fail_provisioning(state, reason)
     end
   end
 
@@ -96,6 +118,7 @@ defmodule AgentYard.Runs.RunProcess do
            state
            | adapter_state: adapter_state,
              run_config: adapter_config,
+             phase: :running,
              timeout_ref: schedule_timeout(state.run.timeout_seconds)
          }}
 
@@ -115,7 +138,9 @@ defmodule AgentYard.Runs.RunProcess do
         complete_run(state)
 
       "error" ->
-        {:noreply, mark_failed(state, event.message || "Agent error")}
+        state = mark_failed(state, event.message || "Agent error", true)
+        state = cleanup(state)
+        {:stop, :normal, state}
 
       _ ->
         cond do
@@ -133,7 +158,7 @@ defmodule AgentYard.Runs.RunProcess do
     _ = if state.adapter_state, do: state.adapter.cancel(state.adapter_state), else: :ok
     state = persist_event(state, Event.error(message))
     state = mark_failed(state, message, true)
-    cleanup(state)
+    state = cleanup(state)
     {:stop, :normal, state}
   end
 
@@ -145,8 +170,8 @@ defmodule AgentYard.Runs.RunProcess do
     state = persist_event(state, Event.status("Run cancelled"))
     {:ok, run} = Runs.update_status(state.run, "cancelled", %{finished_at: DateTime.utc_now()})
     Runs.broadcast(run, {:run_updated, run})
-    cleanup(%{state | run: run})
-    {:stop, :normal, :ok, %{state | run: run}}
+    state = %{state | run: run} |> cancel_provision_retry() |> cleanup()
+    {:stop, :normal, :ok, state}
   end
 
   def handle_call({:follow_up, prompt}, _from, state) do
@@ -177,7 +202,7 @@ defmodule AgentYard.Runs.RunProcess do
         message = safe_message(reason, state.secret_values)
         state = persist_event(state, Event.error("Could not publish changes: #{message}"))
         state = mark_failed(state, message, true)
-        cleanup(state)
+        state = cleanup(state)
         {:stop, :normal, state}
     end
   end
@@ -187,7 +212,7 @@ defmodule AgentYard.Runs.RunProcess do
     {:ok, run} = Runs.update_status(state.run, status, %{finished_at: DateTime.utc_now()})
     Runs.broadcast(run, {:run_updated, run})
     state = cancel_timeout(%{state | run: run})
-    cleanup(state)
+    state = cleanup(state)
     {:stop, :normal, state}
   end
 
@@ -196,7 +221,7 @@ defmodule AgentYard.Runs.RunProcess do
     _ = if state.adapter_state, do: state.adapter.cancel(state.adapter_state), else: :ok
     state = persist_event(state, Event.error(message))
     state = mark_failed(state, message, true)
-    cleanup(state)
+    state = cleanup(state)
     {:stop, :normal, state}
   end
 
@@ -205,15 +230,31 @@ defmodule AgentYard.Runs.RunProcess do
     _ = if state.adapter_state, do: state.adapter.cancel(state.adapter_state), else: :ok
     state = persist_event(state, Event.error(message))
     state = mark_failed(state, message, true)
-    cleanup(state)
+    state = cleanup(state)
     {:stop, :normal, state}
+  end
+
+  defp retry_or_fail_provisioning(state, reason) do
+    if state.provision_attempt < provision_max_attempts() do
+      message =
+        "Provisioning attempt #{state.provision_attempt} failed: " <>
+          "#{safe_message(reason, state.secret_values)}; retrying before any agent turn"
+
+      state = persist_event(state, Event.status(message))
+      _ = ResourceCleanup.cleanup(state.sandbox, state.run_config || %{})
+
+      retry_ref = Process.send_after(self(), :retry_provisioning, provision_retry_delay())
+      {:noreply, %{state | provision_retry_ref: retry_ref}}
+    else
+      stop_failed(state, {:provisioning_failed, reason})
+    end
   end
 
   defp stop_failed(state, reason) do
     message = safe_message(reason, state.secret_values)
     state = persist_event(state, Event.error(message))
     state = mark_failed(state, message, true)
-    cleanup(state)
+    state = cleanup(state)
     {:stop, {:run_failed, reason}, state}
   end
 
@@ -273,21 +314,37 @@ defmodule AgentYard.Runs.RunProcess do
     end
   end
 
-  defp cleanup(%{sandbox: nil}), do: :ok
+  defp cleanup(%{cleanup_done: true} = state), do: state
 
-  defp cleanup(%{sandbox: sandbox, run_config: config}) do
-    _ = sandbox.cleanup(config || %{})
-    _ = cleanup_mcp_config(config)
-    :ok
+  defp cleanup(state) do
+    _ = ResourceCleanup.cleanup(state.sandbox, state.run_config || %{})
+
+    state
+    |> cancel_provision_retry()
+    |> Map.put(:cleanup_done, true)
+    |> Map.put(:phase, :terminal)
   end
 
-  defp cleanup_mcp_config(%{mcp_config_path: path}) when is_binary(path) do
-    path
-    |> Path.dirname()
-    |> File.rm_rf()
+  defp provision_max_attempts do
+    case Application.get_env(:agentyard, :provision_max_attempts, 3) do
+      attempts when is_integer(attempts) and attempts > 0 -> attempts
+      _ -> 3
+    end
   end
 
-  defp cleanup_mcp_config(_config), do: :ok
+  defp provision_retry_delay do
+    case Application.get_env(:agentyard, :provision_retry_delay_ms, 100) do
+      delay when is_integer(delay) and delay >= 0 -> delay
+      _ -> 100
+    end
+  end
+
+  defp cancel_provision_retry(%{provision_retry_ref: nil} = state), do: state
+
+  defp cancel_provision_retry(%{provision_retry_ref: ref} = state) do
+    _ = Process.cancel_timer(ref)
+    %{state | provision_retry_ref: nil}
+  end
 
   defp cancel_timeout(%{timeout_ref: nil} = state), do: state
 
@@ -338,11 +395,21 @@ defmodule AgentYard.Runs.RunProcess do
   defp adapter_for(%{session: %{agent_profile: %{provider: "openrouter"}}}),
     do: AgentYard.Agents.OpenRouter
 
+  defp adapter_for(%{session: %{agent_profile: %{provider: "acp"}}}),
+    do: AgentYard.Agents.ACPStub
+
   defp adapter_for(%{session: %{agent_profile: %{provider: "fake"}}}), do: Fake
   defp adapter_for(_run), do: Fake
 
-  defp sandbox_for(%{environment: "docker"}), do: Docker
-  defp sandbox_for(_run), do: Local
+  defp sandbox_for(run) do
+    case Application.get_env(:agentyard, :sandbox_module) do
+      module when is_atom(module) -> module
+      _ -> default_sandbox_for(run)
+    end
+  end
+
+  defp default_sandbox_for(%{environment: "docker"}), do: Docker
+  defp default_sandbox_for(_run), do: Local
 
   defp sandbox_name(Docker), do: "Docker"
   defp sandbox_name(Local), do: "local"

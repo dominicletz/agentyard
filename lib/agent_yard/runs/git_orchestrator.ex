@@ -18,24 +18,37 @@ defmodule AgentYard.Runs.GitOrchestrator do
     repository = run.session.repository
     provider = config[:git_provider] || provider_for(repository.forge)
     workspace = config[:workspace] || workspace_path(run, config)
+    workspace_managed? = is_nil(config[:workspace])
     forge_config = forge_config(repository, run, config)
 
-    with :ok <- File.mkdir_p(workspace),
-         {:ok, events} <- clone_or_initialize(run, repository, provider, forge_config, workspace),
-         {:ok, _} <- configure_identity(workspace),
-         {:ok, branch} <- provider.create_branch(forge_config, workspace, run.branch_name) do
-      {:ok,
-       Map.merge(config, %{
-         workspace: workspace,
-         git_provider: provider,
-         forge_config: forge_config,
-         forge_token: forge_config[:token],
-         git_prepared: true,
-         branch: branch
-       }),
-       events ++
-         [Event.status("Workspace ready on #{run.branch_name}")] ++
-         progress_comment_events(run, provider, forge_config)}
+    result =
+      with :ok <- File.mkdir_p(workspace),
+           {:ok, events} <-
+             clone_or_initialize(run, repository, provider, forge_config, workspace),
+           {:ok, _} <- configure_identity(workspace),
+           {:ok, branch} <- provider.create_branch(forge_config, workspace, run.branch_name) do
+        {:ok,
+         Map.merge(config, %{
+           workspace: workspace,
+           workspace_managed?: workspace_managed?,
+           git_provider: provider,
+           forge_config: forge_config,
+           forge_token: forge_config[:token],
+           git_prepared: true,
+           branch: branch
+         }),
+         events ++
+           [Event.status("Workspace ready on #{run.branch_name}")] ++
+           progress_comment_events(run, provider, forge_config)}
+      end
+
+    case result do
+      {:error, reason} ->
+        if workspace_managed?, do: File.rm_rf(workspace)
+        {:error, reason}
+
+      success ->
+        success
     end
   end
 

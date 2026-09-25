@@ -1,3 +1,18 @@
+defmodule AgentYard.RunsLifecycleTest.RetrySandbox do
+  def prepare(config) do
+    counter = Application.fetch_env!(:agentyard, :provision_retry_counter)
+    attempt = Agent.get_and_update(counter, fn value -> {value + 1, value + 1} end)
+
+    if attempt == 1 do
+      {:error, :transient_sandbox_failure}
+    else
+      {:ok, Map.put(config, :sandbox, :local)}
+    end
+  end
+
+  def cleanup(_config), do: :ok
+end
+
 defmodule AgentYard.RunsLifecycleTest do
   use ExUnit.Case, async: false
 
@@ -177,4 +192,51 @@ defmodule AgentYard.RunsLifecycleTest do
       assert Decimal.equal?(Repo.get!(AgentYard.Runs.Run, run.id).cost_usd, Decimal.new("0.04"))
     end
   end
+
+  test "retries transient provisioning before starting the adapter", context do
+    if context[:database] == false do
+      assert true
+    else
+      previous_module = Application.get_env(:agentyard, :sandbox_module)
+      previous_delay = Application.get_env(:agentyard, :provision_retry_delay_ms)
+      {:ok, counter} = Agent.start_link(fn -> 0 end)
+
+      Application.put_env(:agentyard, :sandbox_module, RetrySandbox)
+      Application.put_env(:agentyard, :provision_retry_counter, counter)
+      Application.put_env(:agentyard, :provision_retry_delay_ms, 0)
+
+      on_exit(fn ->
+        restore_application_env(:sandbox_module, previous_module)
+        restore_application_env(:provision_retry_delay_ms, previous_delay)
+        Application.delete_env(:agentyard, :provision_retry_counter)
+        Agent.stop(counter)
+      end)
+
+      {:ok, run} =
+        Runs.create_run(context.user, context.team, %{
+          repository_id: context.repository.id,
+          agent_profile_id: context.profile.id,
+          prompt: "Retry setup without replaying agent turns"
+        })
+
+      assert {:ok, _job} = Runs.start_run(run)
+
+      assert TestFactory.eventually(fn ->
+               Repo.get!(AgentYard.Runs.Run, run.id).status == "succeeded"
+             end)
+
+      events = Runs.list_events(Repo.get!(AgentYard.Runs.Run, run.id))
+
+      assert Enum.count(events, &(&1.kind == "assistant_delta")) == 2
+
+      assert Enum.any?(events, fn event ->
+               event.kind == "status" and event.payload["message"] =~ "retrying"
+             end)
+
+      assert Agent.get(counter, & &1) == 2
+    end
+  end
+
+  defp restore_application_env(key, nil), do: Application.delete_env(:agentyard, key)
+  defp restore_application_env(key, value), do: Application.put_env(:agentyard, key, value)
 end
