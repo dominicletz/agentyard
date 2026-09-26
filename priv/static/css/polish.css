@@ -6,3 +6,59 @@ pre {
 .event-body pre {
   white-space: pre-wrap;
 }
+
+.brand-mark {
+  display: block;
+  flex: 0 0 auto;
+  object-fit: contain;
+  background: transparent;
+}
+
+.auth-brand {
+  gap: 10px;
+}
+
+.auth-brand .brand-mark {
+  width: 32px;
+  height: 32px;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+  background: var(--border);
+}
+
+.auth-divider span {
+  flex: 0 0 auto;
+}
+
+.auth-form .button {
+  width: 100%;
+}
+
+.button:focus-visible,
+.auth-link:focus-visible,
+.sidebar-nav a:focus-visible,
+.logout-link:focus-visible {
+  outline: 3px solid rgba(99, 102, 241, 0.35);
+  outline-offset: 2px;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid rgba(79, 70, 229, 0.16);
+  outline-offset: 1px;
+}

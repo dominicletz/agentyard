@@ -1,0 +1,62 @@
+<main class="auth-page">
+  <div class="auth-card">
+    <a class="brand auth-brand" href={~p"/"} aria-label="AgentYard">
+      <img
+        class="brand-mark"
+        src={~p"/images/agentyard-mark.svg"}
+        alt="AgentYard"
+      />
+      <strong aria-hidden="true">AgentYard</strong>
+    </a>
+
+    <h1><%= @title %></h1>
+    <p class="muted">The open-source control plane for team coding agents.</p>
+    <p :if={@auth_error} class="flash flash-error"><%= @auth_error %></p>
+
+    <%= if @magic_link_sent do %>
+      <p>Check your email for a one-time sign-in link.</p>
+      <p class="muted">
+        If an account exists for that address, the message should arrive shortly.
+        The link expires in <%= @magic_link_ttl_minutes %> minutes.
+      </p>
+      <a class="auth-link" href={~p"/login"}>Back to sign in</a>
+    <% else %>
+      <form method="post" action={@form_action} class="auth-form">
+        <input type="hidden" name="_csrf_token" value={@csrf_token} />
+        <label :if={@show_name}>
+          Name
+          <input name="name" required autocomplete="name" />
+        </label>
+        <label>
+          Email
+          <input name="email" type="email" required autocomplete="email" />
+        </label>
+        <label>
+          Password
+          <input
+            name="password"
+            type="password"
+            required
+            minlength="8"
+            autocomplete={@password_autocomplete}
+          />
+        </label>
+        <button class="button button-primary" type="submit"><%= @submit_label %></button>
+      </form>
+
+      <%= if @show_magic_link do %>
+        <div class="auth-divider"><span>or</span></div>
+        <form method="post" action={~p"/login/magic"} class="auth-form">
+          <input type="hidden" name="_csrf_token" value={@csrf_token} />
+          <label>
+            Email
+            <input name="email" type="email" required autocomplete="email" />
+          </label>
+          <button class="button button-secondary" type="submit">Email me a magic link</button>
+        </form>
+      <% end %>
+
+      <a class="auth-link" href={@alternate_path}><%= @alternate_label %></a>
+    <% end %>
+  </div>
+</main>
