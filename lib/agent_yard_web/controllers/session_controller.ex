@@ -132,7 +132,9 @@ defmodule AgentYardWeb.SessionController do
       |> Map.put(:auth_error, Phoenix.Flash.get(conn.assigns[:flash] || %{}, :error))
       |> Map.put(:csrf_token, Plug.CSRFProtection.get_csrf_token())
 
-    render(conn, :auth, assigns)
+    conn
+    |> put_layout(html: false)
+    |> render(:auth, assigns)
   end
 
   defp format_errors(changeset) do
