@@ -1,3 +1,8 @@
+> [!IMPORTANT]
+> **This project is archived and no longer maintained.**
+> For an open-source, self-hosted tool to manage teams of coding agents, use
+> [Paperclip](https://github.com/paperclipai/paperclip) instead.
+
 # AgentYard
 
 AgentYard is an Apache-2.0, self-hosted control plane for team coding agents.
